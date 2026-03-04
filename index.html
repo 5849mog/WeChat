@@ -164,6 +164,40 @@ function buildMessagesForAgent(chat,userText,agentName){
   ];
 }
 
+
+function detectAddressedMember(text,chat){
+  if(chat.type!=='family') return null;
+  const t=(text||'').trim();
+  const dict=[
+    ['(^|[，,。！？!?:：\\s])哥哥([，,。！？!?:：\\s]|$)','哥哥'],
+    ['(^|[，,。！？!?:：\\s])哥([，,。！？!?:：\\s]|$)','哥哥'],
+    ['(^|[，,。！？!?:：\\s])妈妈([，,。！？!?:：\\s]|$)','妈妈'],
+    ['(^|[，,。！？!?:：\\s])妈([，,。！？!?:：\\s]|$)','妈妈'],
+    ['(^|[，,。！？!?:：\\s])爸爸([，,。！？!?:：\\s]|$)','爸爸'],
+    ['(^|[，,。！？!?:：\\s])爸([，,。！？!?:：\\s]|$)','爸爸'],
+    ['(^|[，,。！？!?:：\\s])爷爷([，,。！？!?:：\\s]|$)','爷爷'],
+    ['(^|[，,。！？!?:：\\s])奶奶([，,。！？!?:：\\s]|$)','奶奶'],
+    ['(^|[，,。！？!?:：\\s])外公([，,。！？!?:：\\s]|$)','外公'],
+    ['(^|[，,。！？!?:：\\s])外婆([，,。！？!?:：\\s]|$)','外婆']
+  ];
+  for(const [pat,name] of dict){ if(new RegExp(pat).test(t)) return name; }
+  for(const m of ['爸爸','妈妈','爷爷','奶奶','外公','外婆','哥哥']){
+    if(t.includes(m)) return m;
+  }
+  return null;
+}
+
+function rankFamilySpeakers(text){
+  const t=(text||'').trim();
+  const score={爸爸:0,妈妈:0,爷爷:0,奶奶:0,外公:0,外婆:0,哥哥:0};
+  if(/工作|加班|方案|责任|客户|项目/.test(t)) score['爸爸']+=2;
+  if(/吃饭|胃|睡|作息|穿衣|冷|热|身体/.test(t)) score['妈妈']+=2;
+  if(/回家|传统|礼|长辈|孝顺/.test(t)) {score['爷爷']+=1;score['奶奶']+=1;}
+  if(/体检|血压|散步|养生/.test(t)) {score['外公']+=1;score['外婆']+=1;}
+  if(/快递|吐槽|别闹|兄弟|姐妹|出来说|说几句/.test(t)) score['哥哥']+=2;
+  return Object.entries(score).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+}
+
 function localRoleReply(chat,userText,target){
   if(chat.type==='lover'){
     const lines=['我在，刚刚在忙，现在只想好好和你说话。','今天挺想你的，晚一点我们见面。','你说我都在听，别担心。'];
@@ -218,18 +252,40 @@ async function replyByAgent(chat,userText,agentName){
 }
 
 async function generateGroupReplies(chat,userText){
-  const target=pickMentionTarget(userText,chat);
   const replies=[];
-  if(target){
-    const r=await replyByAgent(chat,userText,target);
-    if(r) replies.push(r);
+  // 优先级：@点名 > 自然称呼点名 > 语义匹配主说话人 > 轻度随机补充
+  const atTarget=pickMentionTarget(userText,chat);
+  const naturalTarget=detectAddressedMember(userText,chat);
+  const primary=atTarget || naturalTarget;
+
+  if(primary){
+    const main=await replyByAgent(chat,userText,primary);
+    if(main) replies.push(main);
+    // 被点名时，偶尔有第二人插话，增强真实感
+    if(Math.random()<0.28){
+      const others=['爸爸','妈妈','爷爷','奶奶','外公','外婆','哥哥'].filter(x=>x!==primary);
+      const byRank=rankFamilySpeakers(userText).filter(x=>others.includes(x));
+      const second=(byRank[0]||others[Math.floor(Math.random()*others.length)]);
+      const extra=await replyByAgent(chat,userText,second);
+      if(extra) replies.push(extra);
+    }
     return replies;
   }
+
   const members=['爸爸','妈妈','爷爷','奶奶','外公','外婆','哥哥'];
-  const first=members[Math.floor(Math.random()*members.length)];
-  const second=Math.random()<0.45?members.filter(x=>x!==first)[Math.floor(Math.random()*6)]:null;
-  const r1=await replyByAgent(chat,userText,first); if(r1) replies.push(r1);
-  if(second){const r2=await replyByAgent(chat,userText,second); if(r2) replies.push(r2);}
+  const ranked=rankFamilySpeakers(userText);
+  const first=(ranked[0] && members.includes(ranked[0])) ? ranked[0] : members[Math.floor(Math.random()*members.length)];
+  const firstReply=await replyByAgent(chat,userText,first);
+  if(firstReply) replies.push(firstReply);
+
+  // 无点名时 40% 概率追加第二位，模拟自然群聊
+  if(Math.random()<0.4){
+    const rest=members.filter(x=>x!==first);
+    const rankedRest=ranked.filter(x=>rest.includes(x));
+    const second=rankedRest[0] || rest[Math.floor(Math.random()*rest.length)];
+    const secondReply=await replyByAgent(chat,userText,second);
+    if(secondReply) replies.push(secondReply);
+  }
   return replies;
 }
 
