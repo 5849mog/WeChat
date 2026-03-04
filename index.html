@@ -32,6 +32,7 @@
     .shell {
       max-width: 540px;
       margin: 0 auto;
+      height: 100vh;
       height: 100dvh;
       background: var(--bg);
       display: flex;
@@ -44,7 +45,7 @@
     .safe-top { height: env(safe-area-inset-top, 0px); min-height: 8px; background: var(--surface); }
     .safe-bottom { height: env(safe-area-inset-bottom, 0px); }
 
-    .page { display: none; flex-direction: column; flex: 1; }
+    .page { display: none; flex-direction: column; flex: 1; min-height: 0; }
     .page.active { display: flex; }
 
     .header {
@@ -69,7 +70,7 @@
     }
 
     .icon-btn { border: none; background: transparent; font-size: 20px; color: #444; cursor: pointer; }
-    .content { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; background: var(--card); }
+    .content { flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; background: var(--card); }
 
     .search {
       padding: 8px 12px;
@@ -166,10 +167,11 @@
       transition: transform 0.22s ease;
       display: flex;
       flex-direction: column;
+      min-height: 0;
     }
     .overlay.active { transform: translateX(0); }
 
-    .msgs { flex: 1; overflow: auto; padding: 12px; }
+    .msgs { flex: 1; min-height: 0; overflow: auto; padding: 12px; }
     .msg {
       margin-bottom: 14px;
       display: flex;
@@ -273,9 +275,9 @@
       <div class="search"><div class="search-box">🔍<input id="contact-search" placeholder="搜索联系人" /></div></div>
       <main class="content">
         <ul class="list">
-          <li class="entry"><span class="ico">👥</span><span class="txt">新的朋友</span><span class="arrow">›</span></li>
-          <li class="entry"><span class="ico">🏷️</span><span class="txt">标签</span><span class="arrow">›</span></li>
-          <li class="entry"><span class="ico">🗂️</span><span class="txt">群聊</span><span class="arrow">›</span></li>
+          <li class="entry" data-action="new-friend"><span class="ico">👥</span><span class="txt">新的朋友</span><span class="arrow">›</span></li>
+          <li class="entry" data-action="tags"><span class="ico">🏷️</span><span class="txt">标签</span><span class="arrow">›</span></li>
+          <li class="entry" data-action="groups"><span class="ico">🗂️</span><span class="txt">群聊</span><span class="arrow">›</span></li>
         </ul>
         <div class="gap"></div>
         <ul class="list" id="contact-list"></ul>
@@ -286,13 +288,13 @@
     <section class="page" id="page-discover">
       <header class="header"><h1>发现</h1><span></span></header>
       <main class="content">
-        <div class="entry"><span class="ico">🖼️</span><span class="txt">朋友圈</span><span class="arrow">›</span></div>
+        <div class="entry" data-action="moments"><span class="ico">🖼️</span><span class="txt">朋友圈</span><span class="arrow">›</span></div>
         <div class="gap"></div>
-        <div class="entry"><span class="ico">📹</span><span class="txt">视频号</span><span class="arrow">›</span></div>
-        <div class="entry"><span class="ico">🔍</span><span class="txt">扫一扫</span><span class="arrow">›</span></div>
-        <div class="entry"><span class="ico">🎯</span><span class="txt">搜一搜</span><span class="arrow">›</span></div>
+        <div class="entry" data-action="channels"><span class="ico">📹</span><span class="txt">视频号</span><span class="arrow">›</span></div>
+        <div class="entry" data-action="scan"><span class="ico">🔍</span><span class="txt">扫一扫</span><span class="arrow">›</span></div>
+        <div class="entry" data-action="search"><span class="ico">🎯</span><span class="txt">搜一搜</span><span class="arrow">›</span></div>
         <div class="gap"></div>
-        <div class="entry"><span class="ico">🧩</span><span class="txt">小程序</span><span class="arrow">›</span></div>
+        <div class="entry" data-action="mini-program"><span class="ico">🧩</span><span class="txt">小程序</span><span class="arrow">›</span></div>
         <div class="panel">
           <div class="setting-row"><div>
             <div style="font-weight:600;">GitHub Pages 友好模式</div>
@@ -305,7 +307,7 @@
     <section class="page" id="page-me">
       <header class="header"><h1>我</h1><span></span></header>
       <main class="content">
-        <div class="entry" id="me-card">
+        <div class="entry" id="me-card" data-action="profile">
           <div class="avatar" style="width:64px;height:64px;"><img id="me-avatar" alt="me" /></div>
           <div style="flex:1;">
             <div style="font-size:20px;font-weight:600;">Claude AI</div>
@@ -315,7 +317,7 @@
         </div>
         <div class="gap"></div>
         <div class="entry" id="open-settings"><span class="ico">⚙️</span><span class="txt">设置（API 接入）</span><span class="arrow">›</span></div>
-        <div class="entry"><span class="ico">⭐</span><span class="txt">收藏</span><span class="arrow">›</span></div>
+        <div class="entry" data-action="favorites"><span class="ico">⭐</span><span class="txt">收藏</span><span class="arrow">›</span></div>
       </main>
     </section>
 
@@ -573,6 +575,32 @@
       saveState();
     }
 
+
+    function ensureChatByName(name) {
+      let chat = state.chats.find(c => c.name === name);
+      if (!chat) {
+        chat = { id: Date.now() + Math.floor(Math.random() * 1000), name, unread: 0, muted: false, pinned: false, time: '刚刚', preview: '我们开始聊天吧。', messages: [{ me: false, text: `你好，我是${name}。` }] };
+        state.chats.unshift(chat);
+      }
+      return chat;
+    }
+
+    function handleFeatureAction(action) {
+      const tips = {
+        'new-friend': '新的朋友：这里可扩展好友申请列表',
+        'tags': '标签：后续可按标签筛选联系人',
+        'groups': '群聊：可创建和管理群会话',
+        'moments': '朋友圈：展示动态流（演示版）',
+        'channels': '视频号：短视频入口（演示版）',
+        'scan': '扫一扫：可对接摄像头 SDK',
+        'search': '搜一搜：可聚合内容搜索',
+        'mini-program': '小程序：可挂载应用卡片',
+        'profile': '个人资料：可编辑头像和昵称',
+        'favorites': '收藏：可保存消息、链接与文件'
+      };
+      toast(tips[action] || '功能已连接');
+    }
+
     function bindEvents() {
       document.getElementById('tabbar').addEventListener('click', e => {
         const tab = e.target.closest('.tab');
@@ -586,6 +614,20 @@
 
       document.getElementById('chat-search').addEventListener('input', renderChats);
       document.getElementById('contact-search').addEventListener('input', renderContacts);
+
+      document.getElementById('contact-list').addEventListener('click', e => {
+        const row = e.target.closest('.item');
+        if (!row) return;
+        const name = row.innerText.trim();
+        const chat = ensureChatByName(name);
+        renderChats();
+        saveState();
+        openChat(chat.id);
+      });
+
+      document.querySelectorAll('[data-action]').forEach(el => {
+        el.addEventListener('click', () => handleFeatureAction(el.dataset.action));
+      });
 
       document.getElementById('chat-back').addEventListener('click', closeChat);
       document.getElementById('send-btn').addEventListener('click', sendMessage);
@@ -644,17 +686,33 @@
 
       document.getElementById('new-chat-btn').addEventListener('click', () => {
         const name = prompt('输入新会话名称');
-        if (!name) return;
-        const id = Date.now();
-        state.chats.unshift({ id, name, unread: 0, muted: false, pinned: false, time: '刚刚', preview: '已创建新会话', messages: [{ me: false, text: '你好，我们开始聊天吧。' }] });
+        if (!name) {
+          toast('已取消新建会话');
+          return;
+        }
+        const chat = ensureChatByName(name.trim());
+        chat.time = '刚刚';
+        chat.preview = '已创建新会话';
         renderChats();
         saveState();
         toast('已创建会话');
+        openChat(chat.id);
       });
 
       window.addEventListener('hashchange', () => {
         const p = (location.hash || '#/chats').replace('#/', '');
         if (['chats', 'contacts', 'discover', 'me'].includes(p)) openPage(p);
+      });
+
+      window.addEventListener('keydown', e => {
+        if (e.key !== 'Escape') return;
+        if (document.getElementById('settings-overlay').classList.contains('active')) {
+          document.getElementById('settings-overlay').classList.remove('active');
+          return;
+        }
+        if (document.getElementById('chat-overlay').classList.contains('active')) {
+          closeChat();
+        }
       });
     }
 
