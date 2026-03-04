@@ -1,2 +1,2 @@
 # WeChat
-前段模仿WeChat
+前端模仿WeChat
