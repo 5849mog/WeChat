@@ -2,486 +2,673 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>微信</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ededed" />
+  <title>WeChat Mobile</title>
   <style>
     :root {
       --bg: #ededed;
       --surface: #f7f7f7;
-      --card: #ffffff;
-      --line: #e7e7e7;
-      --text: #101010;
-      --sub: #8a8a8a;
+      --card: #fff;
+      --line: #e6e6e6;
+      --text: #111;
+      --sub: #888;
       --brand: #07c160;
       --danger: #fa5151;
-      --bubble: #95ec69;
+      --bubble-self: #95ec69;
+      --font-scale: 1;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
+    html, body { height: 100%; }
     body {
-      background: var(--bg);
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
+      background: linear-gradient(#dadada, #f1f1f1);
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', sans-serif;
+      font-size: calc(14px * var(--font-scale));
       color: var(--text);
-      height: 100vh;
       overflow: hidden;
-      -webkit-font-smoothing: antialiased;
     }
 
-    .app {
-      max-width: 480px;
+    .shell {
+      max-width: 540px;
       margin: 0 auto;
-      height: 100vh;
+      height: 100dvh;
       background: var(--bg);
       display: flex;
       flex-direction: column;
       position: relative;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
       overflow: hidden;
     }
 
-    .status-bar {
-      height: env(safe-area-inset-top, 0px);
-      min-height: 8px;
-      background: var(--surface);
-    }
+    .safe-top { height: env(safe-area-inset-top, 0px); min-height: 8px; background: var(--surface); }
+    .safe-bottom { height: env(safe-area-inset-bottom, 0px); }
 
     .page { display: none; flex-direction: column; flex: 1; }
     .page.active { display: flex; }
 
     .header {
       height: 44px;
-      background: var(--surface);
-      border-bottom: 1px solid #d9d9d9;
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 12px;
+      background: var(--surface);
+      border-bottom: 1px solid #d8d8d8;
       position: relative;
-    }
-
-    .header-title {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      font-weight: 600;
-      font-size: 17px;
-    }
-
-    .header-actions { display: flex; gap: 14px; font-size: 20px; }
-
-    .content {
-      flex: 1;
-      overflow-y: auto;
-      background: var(--card);
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .search-wrap {
-      background: var(--bg);
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--line);
-      position: sticky;
-      top: 0;
       z-index: 3;
     }
 
+    .header h1 {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 17px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .icon-btn { border: none; background: transparent; font-size: 20px; color: #444; cursor: pointer; }
+    .content { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; background: var(--card); }
+
     .search {
+      padding: 8px 12px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .search-box {
       background: #fff;
-      border-radius: 7px;
-      padding: 7px 10px;
+      border-radius: 8px;
+      padding: 8px 10px;
       display: flex;
       align-items: center;
       gap: 6px;
       color: var(--sub);
     }
-
-    .search input { border: none; outline: none; width: 100%; font-size: 14px; }
+    .search-box input { border: 0; width: 100%; outline: none; font-size: 14px; background: transparent; }
 
     .list { list-style: none; }
-
-    .chat-item, .contact-item, .entry {
+    .item {
       display: flex;
       align-items: center;
-      background: var(--card);
       padding: 10px 12px;
       border-bottom: 1px solid var(--line);
+      background: var(--card);
+      position: relative;
       cursor: pointer;
     }
-    .chat-item:active, .contact-item:active, .entry:active { background: #f3f3f3; }
+    .item:active { background: #f3f3f3; }
 
     .avatar {
       width: 48px;
       height: 48px;
-      border-radius: 8px;
-      overflow: hidden;
-      margin-right: 10px;
-      position: relative;
-      flex-shrink: 0;
-    }
-    .avatar img { width: 100%; height: 100%; object-fit: cover; }
-
-    .dot {
-      position: absolute;
-      top: -2px;
-      right: -2px;
-      min-width: 18px;
-      height: 18px;
-      padding: 0 5px;
       border-radius: 10px;
-      background: var(--danger);
-      color: #fff;
-      font-size: 11px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border: 2px solid var(--card);
+      margin-right: 10px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #f2f2f2;
     }
 
-    .main { flex: 1; overflow: hidden; }
-    .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-    .name { font-size: 16px; }
-    .time { font-size: 11px; color: var(--sub); }
-    .preview { font-size: 14px; color: var(--sub); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+    .avatar img { width: 100%; height: 100%; display: block; }
+
+    .meta { flex: 1; overflow: hidden; }
+    .row { display: flex; justify-content: space-between; margin-bottom: 4px; gap: 10px; }
+    .name { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .time { color: var(--sub); font-size: 11px; white-space: nowrap; }
+    .preview { font-size: 13px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .badge {
+      min-width: 18px; height: 18px; border-radius: 9px; background: var(--danger);
+      color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center;
+      padding: 0 6px;
+    }
+
+    .right-col { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-left: 6px; }
+    .muted { color: #b2b2b2; font-size: 11px; }
+
+    .entry { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid var(--line); background: #fff; }
+    .entry .ico { width: 26px; margin-right: 12px; text-align: center; }
+    .entry .txt { flex: 1; font-size: 16px; }
+    .entry .arrow { color: #bbb; }
+    .gap { height: 8px; background: var(--bg); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 
     .tabbar {
-      height: calc(50px + env(safe-area-inset-bottom, 0px));
-      padding-bottom: env(safe-area-inset-bottom, 0px);
       background: var(--surface);
       border-top: 1px solid #d9d9d9;
       display: flex;
+      height: 50px;
     }
-
     .tab {
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+      border: 0;
+      background: transparent;
       color: #7f8389;
       font-size: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       gap: 2px;
+      cursor: pointer;
     }
-    .tab i { font-style: normal; font-size: 20px; }
+    .tab .tab-icon { font-size: 20px; }
     .tab.active { color: var(--brand); }
 
-    .section-gap { height: 8px; background: var(--bg); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-
-    .entry .icon { width: 24px; text-align: center; margin-right: 14px; font-size: 19px; }
-    .entry .text { flex: 1; font-size: 16px; }
-    .entry .arrow { color: #b3b3b3; }
-
-    .me-card {
-      background: #fff;
-      display: flex;
-      align-items: center;
-      padding: 20px 14px;
-      border-bottom: 1px solid var(--line);
-    }
-    .me-card .avatar { width: 66px; height: 66px; border-radius: 10px; }
-    .wx-id { color: var(--sub); margin-top: 8px; font-size: 14px; }
-
-    .chat-screen {
+    .overlay {
       position: absolute;
       inset: 0;
       background: var(--bg);
-      z-index: 20;
+      z-index: 8;
       transform: translateX(100%);
-      transition: transform .22s ease;
+      transition: transform 0.22s ease;
       display: flex;
       flex-direction: column;
     }
-    .chat-screen.active { transform: translateX(0); }
+    .overlay.active { transform: translateX(0); }
 
-    .chat-list-area { flex: 1; padding: 10px; overflow-y: auto; }
-    .bubble-row { display: flex; margin-bottom: 16px; align-items: flex-start; gap: 8px; }
-    .bubble-row.me { justify-content: flex-end; }
-    .bubble {
-      max-width: 72%;
-      border-radius: 8px;
-      padding: 9px 11px;
-      font-size: 15px;
-      line-height: 1.4;
-      background: #fff;
-      word-break: break-word;
+    .msgs { flex: 1; overflow: auto; padding: 12px; }
+    .msg {
+      margin-bottom: 14px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
     }
-    .bubble-row.me .bubble { background: var(--bubble); }
+    .msg.me { justify-content: flex-end; }
+    .msg .bubble {
+      max-width: 72%;
+      padding: 9px 11px;
+      background: #fff;
+      border-radius: 8px;
+      line-height: 1.45;
+      word-break: break-word;
+      font-size: 15px;
+    }
+    .msg.me .bubble { background: var(--bubble-self); }
 
     .composer {
-      background: var(--surface);
-      border-top: 1px solid #d6d6d6;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      border-top: 1px solid #d7d7d7;
       padding: 7px;
+      display: flex;
+      gap: 8px;
+      background: var(--surface);
     }
     .composer input {
       flex: 1;
-      border: none;
-      outline: none;
+      border: 0;
+      border-radius: 7px;
       background: #fff;
-      border-radius: 6px;
-      padding: 9px 10px;
+      padding: 10px;
+      outline: none;
       font-size: 15px;
     }
     .send {
+      border: 0;
       background: var(--brand);
       color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 9px 14px;
+      border-radius: 7px;
+      padding: 0 14px;
       font-size: 14px;
+      cursor: pointer;
     }
 
-    .story-cover {
-      height: 200px;
-      background: linear-gradient(120deg, #3b4f68, #6a8bad);
-      position: relative;
+    .panel { background: #fff; margin: 10px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+    .setting-row { display: flex; align-items: center; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line); }
+    .setting-row:last-child { border-bottom: 0; }
+    .setting-row label { min-width: 88px; color: #555; font-size: 13px; }
+    .setting-row input, .setting-row textarea, .setting-row select {
+      width: 100%; border: 1px solid #ddd; border-radius: 7px; padding: 8px; font-size: 13px; outline: none;
     }
-    .story-user {
-      position: absolute;
-      right: 12px;
-      bottom: 10px;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 500;
-    }
+    .setting-row textarea { min-height: 72px; resize: vertical; }
+    .tiny { font-size: 12px; color: var(--sub); padding: 0 12px 12px; line-height: 1.5; }
 
-    .moments-item { background: #fff; border-bottom: 1px solid var(--line); padding: 12px; }
-    .moments-text { margin: 8px 0; line-height: 1.5; }
-    .moments-meta { color: var(--sub); font-size: 12px; }
-
-    .empty {
-      color: var(--sub);
-      text-align: center;
-      font-size: 13px;
-      padding: 24px 8px;
-      display: none;
+    .switch {
+      width: 42px; height: 24px; border-radius: 12px; background: #ccc; position: relative; cursor: pointer; flex-shrink: 0;
     }
+    .switch::after { content: ''; width: 20px; height: 20px; border-radius: 50%; background: #fff; position: absolute; top: 2px; left: 2px; transition: all .2s; }
+    .switch.on { background: var(--brand); }
+    .switch.on::after { left: 20px; }
+
+    .actions { display: flex; gap: 8px; padding: 10px; }
+    .btn {
+      border: 0; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-size: 13px;
+      background: #ececec; color: #333;
+    }
+    .btn.primary { background: var(--brand); color: #fff; }
+    .btn.warn { background: #ffe8e8; color: #ca3c3c; }
+
+    .toast {
+      position: absolute; left: 50%; bottom: 88px; transform: translateX(-50%);
+      background: rgba(0, 0, 0, .76); color: #fff; border-radius: 999px; padding: 8px 14px;
+      font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s;
+      z-index: 20;
+    }
+    .toast.show { opacity: 1; }
+
+    .empty { padding: 20px; color: var(--sub); text-align: center; font-size: 13px; display: none; }
+    .mini { font-size: 12px; color: var(--sub); }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="status-bar"></div>
+  <div class="shell" id="app">
+    <div class="safe-top"></div>
 
     <section class="page active" id="page-chats">
       <header class="header">
-        <div class="header-title">微信 (<span id="unread">0</span>)</div>
-        <div class="header-actions"><span>＋</span></div>
+        <button class="icon-btn" id="new-chat-btn">＋</button>
+        <h1>微信 (<span id="unread-total">0</span>)</h1>
+        <button class="icon-btn" id="open-settings-top">⚙️</button>
       </header>
-      <div class="search-wrap">
-        <div class="search">🔍<input id="chat-search" placeholder="搜索" /></div>
-      </div>
+      <div class="search"><div class="search-box">🔍<input id="chat-search" placeholder="搜索聊天、消息" /></div></div>
       <main class="content">
         <ul class="list" id="chat-list"></ul>
-        <div class="empty" id="chat-empty">没有匹配的聊天记录</div>
+        <div class="empty" id="chat-empty">未找到匹配会话</div>
       </main>
     </section>
 
     <section class="page" id="page-contacts">
-      <header class="header"><div class="header-title">通讯录</div></header>
-      <div class="search-wrap">
-        <div class="search">🔍<input id="contact-search" placeholder="搜索联系人" /></div>
-      </div>
+      <header class="header"><h1>通讯录</h1><span></span></header>
+      <div class="search"><div class="search-box">🔍<input id="contact-search" placeholder="搜索联系人" /></div></div>
       <main class="content">
         <ul class="list">
-          <li class="entry"><span class="icon">👥</span><span class="text">新的朋友</span><span class="arrow">›</span></li>
-          <li class="entry"><span class="icon">🗂️</span><span class="text">仅聊天的朋友</span><span class="arrow">›</span></li>
-          <li class="entry"><span class="icon">🏷️</span><span class="text">标签</span><span class="arrow">›</span></li>
+          <li class="entry"><span class="ico">👥</span><span class="txt">新的朋友</span><span class="arrow">›</span></li>
+          <li class="entry"><span class="ico">🏷️</span><span class="txt">标签</span><span class="arrow">›</span></li>
+          <li class="entry"><span class="ico">🗂️</span><span class="txt">群聊</span><span class="arrow">›</span></li>
         </ul>
-        <div class="section-gap"></div>
+        <div class="gap"></div>
         <ul class="list" id="contact-list"></ul>
-        <div class="empty" id="contact-empty">没有匹配的联系人</div>
+        <div class="empty" id="contact-empty">未找到联系人</div>
       </main>
     </section>
 
     <section class="page" id="page-discover">
-      <header class="header"><div class="header-title">发现</div></header>
+      <header class="header"><h1>发现</h1><span></span></header>
       <main class="content">
-        <div class="story-cover">
-          <div class="story-user">Claude AI <span class="avatar"><img src="https://picsum.photos/seed/u1/100" alt=""/></span></div>
+        <div class="entry"><span class="ico">🖼️</span><span class="txt">朋友圈</span><span class="arrow">›</span></div>
+        <div class="gap"></div>
+        <div class="entry"><span class="ico">📹</span><span class="txt">视频号</span><span class="arrow">›</span></div>
+        <div class="entry"><span class="ico">🔍</span><span class="txt">扫一扫</span><span class="arrow">›</span></div>
+        <div class="entry"><span class="ico">🎯</span><span class="txt">搜一搜</span><span class="arrow">›</span></div>
+        <div class="gap"></div>
+        <div class="entry"><span class="ico">🧩</span><span class="txt">小程序</span><span class="arrow">›</span></div>
+        <div class="panel">
+          <div class="setting-row"><div>
+            <div style="font-weight:600;">GitHub Pages 友好模式</div>
+            <div class="mini">全部状态和设置都保存在本地 LocalStorage，无需后端。</div>
+          </div></div>
         </div>
-        <div class="moments-item">
-          <strong>朋友圈动态预览</strong>
-          <p class="moments-text">今天把项目重构了一轮：状态切换、数据驱动渲染、搜索过滤都顺滑很多，越来越像微信了。</p>
-          <p class="moments-meta">2分钟前 · 来自 iPhone</p>
-        </div>
-        <ul class="list">
-          <li class="entry"><span class="icon">🛰️</span><span class="text">视频号</span><span class="arrow">›</span></li>
-          <li class="entry"><span class="icon">🔍</span><span class="text">扫一扫</span><span class="arrow">›</span></li>
-          <li class="entry"><span class="icon">🎯</span><span class="text">搜一搜</span><span class="arrow">›</span></li>
-          <li class="entry"><span class="icon">🧩</span><span class="text">小程序</span><span class="arrow">›</span></li>
-        </ul>
       </main>
     </section>
 
     <section class="page" id="page-me">
-      <header class="header"><div class="header-title">我</div></header>
+      <header class="header"><h1>我</h1><span></span></header>
       <main class="content">
-        <div class="me-card">
-          <div class="avatar"><img src="https://picsum.photos/seed/me/120" alt="" /></div>
-          <div>
-            <h3>Claude AI</h3>
-            <p class="wx-id">微信号：claude_ai_01</p>
+        <div class="entry" id="me-card">
+          <div class="avatar" style="width:64px;height:64px;"><img id="me-avatar" alt="me" /></div>
+          <div style="flex:1;">
+            <div style="font-size:20px;font-weight:600;">Claude AI</div>
+            <div class="mini">微信号：codex_demo_001</div>
           </div>
+          <span class="arrow">›</span>
         </div>
-        <div class="section-gap"></div>
-        <ul class="list">
-          <li class="entry"><span class="icon">💬</span><span class="text">服务</span><span class="arrow">›</span></li>
-          <li class="entry"><span class="icon">⭐</span><span class="text">收藏</span><span class="arrow">›</span></li>
-          <li class="entry"><span class="icon">🖼️</span><span class="text">朋友圈</span><span class="arrow">›</span></li>
-          <li class="entry"><span class="icon">⚙️</span><span class="text">设置</span><span class="arrow">›</span></li>
-        </ul>
+        <div class="gap"></div>
+        <div class="entry" id="open-settings"><span class="ico">⚙️</span><span class="txt">设置（API 接入）</span><span class="arrow">›</span></div>
+        <div class="entry"><span class="ico">⭐</span><span class="txt">收藏</span><span class="arrow">›</span></div>
       </main>
     </section>
 
     <nav class="tabbar" id="tabbar">
-      <div class="tab active" data-page="chats"><i>💬</i><span>微信</span></div>
-      <div class="tab" data-page="contacts"><i>👥</i><span>通讯录</span></div>
-      <div class="tab" data-page="discover"><i>✨</i><span>发现</span></div>
-      <div class="tab" data-page="me"><i>🙂</i><span>我</span></div>
+      <button class="tab active" data-page="chats"><span class="tab-icon">💬</span><span>微信</span></button>
+      <button class="tab" data-page="contacts"><span class="tab-icon">👥</span><span>通讯录</span></button>
+      <button class="tab" data-page="discover"><span class="tab-icon">✨</span><span>发现</span></button>
+      <button class="tab" data-page="me"><span class="tab-icon">🙂</span><span>我</span></button>
     </nav>
 
-    <section class="chat-screen" id="chat-screen">
+    <div class="safe-bottom"></div>
+
+    <section class="overlay" id="chat-overlay">
       <header class="header">
-        <div id="chat-back" style="font-size:20px;">‹</div>
-        <div class="header-title" id="chat-title">聊天</div>
-        <div>⋯</div>
+        <button class="icon-btn" id="chat-back">‹</button>
+        <h1 id="chat-title">聊天</h1>
+        <button class="icon-btn" id="chat-menu">⋯</button>
       </header>
-      <main class="chat-list-area" id="message-list"></main>
+      <main class="msgs" id="message-list"></main>
       <footer class="composer">
-        <input id="message-input" placeholder="发消息" maxlength="500" />
+        <input id="msg-input" maxlength="600" placeholder="发消息" />
         <button class="send" id="send-btn">发送</button>
       </footer>
     </section>
+
+    <section class="overlay" id="settings-overlay">
+      <header class="header">
+        <button class="icon-btn" id="settings-back">‹</button>
+        <h1>设置与 API 接入</h1>
+        <span></span>
+      </header>
+      <main class="content">
+        <div class="panel">
+          <div class="setting-row"><label>API 模式</label><select id="api-mode"><option value="off">关闭（本地回声）</option><option value="openai">OpenAI 兼容</option></select></div>
+          <div class="setting-row"><label>Endpoint</label><input id="api-endpoint" placeholder="https://api.openai.com/v1/chat/completions" /></div>
+          <div class="setting-row"><label>API Key</label><input id="api-key" type="password" placeholder="sk-..." /></div>
+          <div class="setting-row"><label>Model</label><input id="api-model" placeholder="gpt-4o-mini / deepseek-chat / qwen-plus" /></div>
+          <div class="setting-row"><label>系统提示词</label><textarea id="system-prompt" placeholder="你是微信里的智能助手。"></textarea></div>
+          <div class="setting-row"><label>AI 自动回复</label><div class="switch" id="ai-switch"></div></div>
+          <div class="setting-row"><label>字体倍率</label><select id="font-scale"><option value="0.95">小</option><option value="1" selected>标准</option><option value="1.1">大</option></select></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="save-settings">保存设置</button>
+          <button class="btn" id="test-api">测试 API</button>
+          <button class="btn warn" id="reset-data">清空本地数据</button>
+        </div>
+        <p class="tiny">说明：为适配 GitHub Pages，本项目不依赖后端，所有配置保存在浏览器本地。若 API 跨域受限，可使用你自己的中转服务 endpoint。</p>
+      </main>
+    </section>
+
+    <div class="toast" id="toast"></div>
   </div>
 
   <script>
-    const chats = [
-      { id: 1, name: '产品群', avatar: 'https://picsum.photos/seed/g1/120', unread: 3, time: '13:42', preview: '今晚评审前请把原型都过一遍', messages: [
-        { me: false, text: '今晚 8 点评审，大家同步最新页面。' },
-        { me: true, text: '收到，我会把聊天页动效再打磨一下。' }
-      ]},
-      { id: 2, name: '文件传输助手', avatar: 'https://picsum.photos/seed/file/120', unread: 0, time: '12:20', preview: 'index.html 已保存到云端', messages: [
-        { me: false, text: '你发送了一个文件：index.html' }
-      ]},
-      { id: 3, name: '小林', avatar: 'https://picsum.photos/seed/u2/120', unread: 1, time: '昨天', preview: '这个版本真的像微信了👏', messages: [
-        { me: false, text: '这个版本真的像微信了👏' },
-        { me: true, text: '我又把通讯录和发现页重排了。' }
-      ]},
-      { id: 4, name: '设计讨论组', avatar: 'https://picsum.photos/seed/g2/120', unread: 0, time: '周一', preview: 'icon 风格统一成线性风格', messages: [
-        { me: false, text: 'icon 风格统一成线性风格' }
-      ]}
-    ];
+    const STORAGE_KEY = 'wechat-gh-pages-v2';
+    const DEFAULT_STATE = {
+      settings: {
+        apiMode: 'off',
+        endpoint: 'https://api.openai.com/v1/chat/completions',
+        apiKey: '',
+        model: 'gpt-4o-mini',
+        systemPrompt: '你是微信里的智能助手，用简洁中文回复。',
+        autoAiReply: false,
+        fontScale: '1'
+      },
+      chats: [
+        { id: 1, name: '文件传输助手', unread: 1, muted: false, pinned: true, time: '10:20', preview: '欢迎使用增强版 WeChat Demo', messages: [{ me: false, text: '欢迎使用增强版 WeChat Demo，支持本地存储与 API 回复。' }] },
+        { id: 2, name: '产品体验群', unread: 3, muted: false, pinned: false, time: '09:47', preview: '今晚演示前请检查手机端布局', messages: [{ me: false, text: '今晚演示前请检查手机端布局。' }, { me: true, text: '已完成，支持手机与桌面浏览器。' }] },
+        { id: 3, name: '小林', unread: 0, muted: true, pinned: false, time: '昨天', preview: '设置页可以直接接 AI API 了吗？', messages: [{ me: false, text: '设置页可以直接接 AI API 了吗？' }] }
+      ],
+      contacts: ['阿哲', '陈晨', '高小雨', '刘可', '王青', '张敏', '赵一帆']
+    };
 
-    const contacts = [
-      ['A', '阿哲'], ['C', '陈晨'], ['D', '大熊'], ['G', '高小雨'], ['L', '刘可'], ['W', '王青'], ['Z', '张敏']
-    ].map((item, idx) => ({ letter: item[0], name: item[1], avatar: `https://picsum.photos/seed/c${idx}/120` }));
+    const state = loadState();
+    let currentPage = 'chats';
+    let activeChatId = null;
 
-    const chatList = document.querySelector('#chat-list');
-    const contactList = document.querySelector('#contact-list');
-    const unreadEl = document.querySelector('#unread');
-    const pages = document.querySelectorAll('.page');
-    const tabs = document.querySelectorAll('.tab');
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        return saved ? { ...DEFAULT_STATE, ...saved, settings: { ...DEFAULT_STATE.settings, ...(saved.settings || {}) } } : structuredClone(DEFAULT_STATE);
+      } catch {
+        return structuredClone(DEFAULT_STATE);
+      }
+    }
 
-    const chatScreen = document.querySelector('#chat-screen');
-    const messageList = document.querySelector('#message-list');
-    const chatTitle = document.querySelector('#chat-title');
-    const input = document.querySelector('#message-input');
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
 
-    let activeChat = null;
+    function avatarData(name) {
+      const color = ['#4f8df8', '#09c15e', '#f39c12', '#8e44ad', '#1abc9c', '#e67e22'][name.charCodeAt(0) % 6];
+      const txt = encodeURIComponent(name.slice(0, 1));
+      return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><rect width='100%25' height='100%25' fill='${color}'/><text x='50%25' y='57%25' text-anchor='middle' fill='white' font-size='56' font-family='Arial'>${txt}</text></svg>`;
+    }
 
-    function renderChats(keyword = '') {
-      const list = chats.filter(c => c.name.includes(keyword) || c.preview.includes(keyword));
-      chatList.innerHTML = list.map(c => `
-        <li class="chat-item" data-id="${c.id}">
-          <div class="avatar"><img src="${c.avatar}" alt="${c.name}"/>${c.unread ? `<span class="dot">${c.unread > 99 ? '99+' : c.unread}</span>` : ''}</div>
-          <div class="main">
-            <div class="row"><strong class="name">${c.name}</strong><span class="time">${c.time}</span></div>
-            <p class="preview">${c.preview}</p>
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 1500);
+    }
+
+    function applySettingsUI() {
+      const s = state.settings;
+      document.getElementById('api-mode').value = s.apiMode;
+      document.getElementById('api-endpoint').value = s.endpoint;
+      document.getElementById('api-key').value = s.apiKey;
+      document.getElementById('api-model').value = s.model;
+      document.getElementById('system-prompt').value = s.systemPrompt;
+      document.getElementById('font-scale').value = s.fontScale;
+      document.getElementById('ai-switch').classList.toggle('on', !!s.autoAiReply);
+      document.documentElement.style.setProperty('--font-scale', s.fontScale || '1');
+      document.getElementById('me-avatar').src = avatarData('我');
+    }
+
+    function filteredChats(keyword = '') {
+      const kw = keyword.trim();
+      return state.chats
+        .filter(c => !kw || c.name.includes(kw) || c.preview.includes(kw))
+        .sort((a, b) => Number(b.pinned) - Number(a.pinned));
+    }
+
+    function renderChats() {
+      const keyword = document.getElementById('chat-search').value;
+      const list = filteredChats(keyword);
+      const ul = document.getElementById('chat-list');
+      ul.innerHTML = list.map(c => `
+        <li class="item" data-chat-id="${c.id}">
+          <div class="avatar"><img src="${avatarData(c.name)}" alt="${c.name}"/></div>
+          <div class="meta">
+            <div class="row"><div class="name">${c.pinned ? '📌 ' : ''}${c.name}</div><span class="time">${c.time}</span></div>
+            <div class="preview">${c.preview}</div>
           </div>
+          <div class="right-col">${c.unread ? `<span class='badge'>${c.unread > 99 ? '99+' : c.unread}</span>` : ''}${c.muted ? '<span class="muted">🔕</span>' : ''}</div>
         </li>
       `).join('');
-      document.querySelector('#chat-empty').style.display = list.length ? 'none' : 'block';
-      unreadEl.textContent = chats.reduce((sum, c) => sum + c.unread, 0);
+      document.getElementById('chat-empty').style.display = list.length ? 'none' : 'block';
+      document.getElementById('unread-total').textContent = state.chats.reduce((sum, c) => sum + (c.muted ? 0 : c.unread), 0);
     }
 
-    function renderContacts(keyword = '') {
-      const list = contacts.filter(c => c.name.includes(keyword));
-      contactList.innerHTML = list.map(c => `
-        <li class="contact-item">
-          <div class="avatar" style="width:40px;height:40px;"><img src="${c.avatar}" alt="${c.name}"/></div>
-          <div style="font-size:16px;">${c.name}</div>
+    function renderContacts() {
+      const kw = document.getElementById('contact-search').value.trim();
+      const list = state.contacts.filter(name => !kw || name.includes(kw));
+      const el = document.getElementById('contact-list');
+      el.innerHTML = list.map(name => `
+        <li class="item">
+          <div class="avatar" style="width:40px;height:40px;"><img src="${avatarData(name)}" alt="${name}"/></div>
+          <div>${name}</div>
         </li>
       `).join('');
-      document.querySelector('#contact-empty').style.display = list.length ? 'none' : 'block';
+      document.getElementById('contact-empty').style.display = list.length ? 'none' : 'block';
     }
 
-    function switchPage(page) {
-      pages.forEach(p => p.classList.toggle('active', p.id === `page-${page}`));
-      tabs.forEach(t => t.classList.toggle('active', t.dataset.page === page));
+    function setHashForPage(page) {
+      const hash = `#/${page}`;
+      if (location.hash !== hash) history.replaceState(null, '', hash);
+    }
+
+    function openPage(page) {
+      currentPage = page;
+      document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${page}`));
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
+      setHashForPage(page);
+    }
+
+    function findChat(id) {
+      return state.chats.find(c => c.id === id);
+    }
+
+    function renderMessages(chat) {
+      const container = document.getElementById('message-list');
+      container.innerHTML = chat.messages.map(m => `
+        <div class="msg ${m.me ? 'me' : ''}">
+          ${m.me ? '' : `<div class='avatar' style='width:36px;height:36px;'><img src='${avatarData(chat.name)}' alt='${chat.name}'/></div>`}
+          <div class="bubble">${escapeHtml(m.text)}</div>
+        </div>
+      `).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     }
 
     function openChat(id) {
-      activeChat = chats.find(c => c.id === id);
-      if (!activeChat) return;
-      activeChat.unread = 0;
-      chatTitle.textContent = activeChat.name;
-      renderMessages();
-      chatScreen.classList.add('active');
-      renderChats(document.querySelector('#chat-search').value.trim());
+      const chat = findChat(id);
+      if (!chat) return;
+      activeChatId = id;
+      chat.unread = 0;
+      document.getElementById('chat-title').textContent = chat.name;
+      document.getElementById('chat-overlay').classList.add('active');
+      renderMessages(chat);
+      renderChats();
+      saveState();
     }
 
-    function renderMessages() {
-      if (!activeChat) return;
-      messageList.innerHTML = activeChat.messages.map(m => `
-        <div class="bubble-row ${m.me ? 'me' : ''}">
-          ${!m.me ? `<span class="avatar" style="width:36px;height:36px;"><img src="${activeChat.avatar}"/></span>` : ''}
-          <div class="bubble">${m.text}</div>
-        </div>
-      `).join('');
-      messageList.scrollTop = messageList.scrollHeight;
+    function closeChat() {
+      activeChatId = null;
+      document.getElementById('chat-overlay').classList.remove('active');
     }
 
-    document.querySelector('#tabbar').addEventListener('click', e => {
-      const tab = e.target.closest('.tab');
-      if (tab) switchPage(tab.dataset.page);
-    });
+    async function requestAiReply(chat, userText) {
+      const s = state.settings;
+      if (s.apiMode !== 'openai' || !s.endpoint || !s.model || !s.apiKey) {
+        return `回声：${userText}`;
+      }
+      const payload = {
+        model: s.model,
+        messages: [
+          { role: 'system', content: s.systemPrompt || '你是微信里的智能助手。' },
+          ...chat.messages.slice(-8).map(m => ({ role: m.me ? 'user' : 'assistant', content: m.text })),
+          { role: 'user', content: userText }
+        ],
+        temperature: 0.7
+      };
+      const res = await fetch(s.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${s.apiKey}` },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        throw new Error(`API 错误 ${res.status}`);
+      }
+      const data = await res.json();
+      return data?.choices?.[0]?.message?.content?.trim() || '（空响应）';
+    }
 
-    document.querySelector('#chat-list').addEventListener('click', e => {
-      const item = e.target.closest('.chat-item');
-      if (item) openChat(Number(item.dataset.id));
-    });
-
-    document.querySelector('#chat-back').addEventListener('click', () => {
-      chatScreen.classList.remove('active');
-      activeChat = null;
-    });
-
-    document.querySelector('#send-btn').addEventListener('click', () => {
+    async function sendMessage() {
+      const input = document.getElementById('msg-input');
       const text = input.value.trim();
-      if (!text || !activeChat) return;
-      activeChat.messages.push({ me: true, text });
-      activeChat.preview = text;
-      activeChat.time = '刚刚';
+      if (!text || !activeChatId) return;
+      const chat = findChat(activeChatId);
+      chat.messages.push({ me: true, text });
+      chat.preview = text;
+      chat.time = '刚刚';
       input.value = '';
-      renderMessages();
-      renderChats(document.querySelector('#chat-search').value.trim());
-      setTimeout(() => {
-        activeChat.messages.push({ me: false, text: '收到，我稍后看。' });
-        activeChat.preview = '收到，我稍后看。';
-        activeChat.time = '刚刚';
-        renderMessages();
-        renderChats(document.querySelector('#chat-search').value.trim());
-      }, 500);
-    });
+      renderMessages(chat);
+      renderChats();
+      saveState();
 
-    document.querySelector('#chat-search').addEventListener('input', e => renderChats(e.target.value.trim()));
-    document.querySelector('#contact-search').addEventListener('input', e => renderContacts(e.target.value.trim()));
+      if (!state.settings.autoAiReply) return;
 
-    renderChats();
-    renderContacts();
+      try {
+        const reply = await requestAiReply(chat, text);
+        chat.messages.push({ me: false, text: reply });
+      } catch (err) {
+        chat.messages.push({ me: false, text: `⚠️ 回复失败：${err.message}` });
+      }
+      chat.preview = chat.messages[chat.messages.length - 1].text;
+      chat.time = '刚刚';
+      renderMessages(chat);
+      renderChats();
+      saveState();
+    }
+
+    function bindEvents() {
+      document.getElementById('tabbar').addEventListener('click', e => {
+        const tab = e.target.closest('.tab');
+        if (tab) openPage(tab.dataset.page);
+      });
+
+      document.getElementById('chat-list').addEventListener('click', e => {
+        const item = e.target.closest('[data-chat-id]');
+        if (item) openChat(Number(item.dataset.chatId));
+      });
+
+      document.getElementById('chat-search').addEventListener('input', renderChats);
+      document.getElementById('contact-search').addEventListener('input', renderContacts);
+
+      document.getElementById('chat-back').addEventListener('click', closeChat);
+      document.getElementById('send-btn').addEventListener('click', sendMessage);
+      document.getElementById('msg-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      document.getElementById('chat-menu').addEventListener('click', () => {
+        const chat = findChat(activeChatId);
+        if (!chat) return;
+        chat.pinned = !chat.pinned;
+        toast(chat.pinned ? '已置顶会话' : '已取消置顶');
+        renderChats();
+        saveState();
+      });
+
+      const openSettings = () => {
+        document.getElementById('settings-overlay').classList.add('active');
+      };
+      document.getElementById('open-settings').addEventListener('click', openSettings);
+      document.getElementById('open-settings-top').addEventListener('click', openSettings);
+      document.getElementById('settings-back').addEventListener('click', () => document.getElementById('settings-overlay').classList.remove('active'));
+
+      document.getElementById('ai-switch').addEventListener('click', e => e.currentTarget.classList.toggle('on'));
+
+      document.getElementById('save-settings').addEventListener('click', () => {
+        state.settings.apiMode = document.getElementById('api-mode').value;
+        state.settings.endpoint = document.getElementById('api-endpoint').value.trim();
+        state.settings.apiKey = document.getElementById('api-key').value.trim();
+        state.settings.model = document.getElementById('api-model').value.trim();
+        state.settings.systemPrompt = document.getElementById('system-prompt').value.trim();
+        state.settings.autoAiReply = document.getElementById('ai-switch').classList.contains('on');
+        state.settings.fontScale = document.getElementById('font-scale').value;
+        saveState();
+        applySettingsUI();
+        toast('设置已保存');
+      });
+
+      document.getElementById('test-api').addEventListener('click', async () => {
+        const temp = findChat(1);
+        try {
+          const result = await requestAiReply(temp, '请回复“连接成功”');
+          toast(`API 测试：${result.slice(0, 16)}`);
+        } catch (err) {
+          toast(`API 测试失败：${err.message}`);
+        }
+      });
+
+      document.getElementById('reset-data').addEventListener('click', () => {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+      });
+
+      document.getElementById('new-chat-btn').addEventListener('click', () => {
+        const name = prompt('输入新会话名称');
+        if (!name) return;
+        const id = Date.now();
+        state.chats.unshift({ id, name, unread: 0, muted: false, pinned: false, time: '刚刚', preview: '已创建新会话', messages: [{ me: false, text: '你好，我们开始聊天吧。' }] });
+        renderChats();
+        saveState();
+        toast('已创建会话');
+      });
+
+      window.addEventListener('hashchange', () => {
+        const p = (location.hash || '#/chats').replace('#/', '');
+        if (['chats', 'contacts', 'discover', 'me'].includes(p)) openPage(p);
+      });
+    }
+
+    function boot() {
+      applySettingsUI();
+      renderChats();
+      renderContacts();
+      bindEvents();
+      const initial = (location.hash || '#/chats').replace('#/', '');
+      openPage(['chats', 'contacts', 'discover', 'me'].includes(initial) ? initial : 'chats');
+      toast('已启用 GitHub Pages 兼容模式');
+    }
+
+    boot();
   </script>
 </body>
 </html>
