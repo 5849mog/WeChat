@@ -51,7 +51,7 @@
   <section class="overlay" id="chat-overlay">
     <header class="header"><button class="icon-btn" id="chat-back">‹</button><h1 id="chat-title">聊天</h1><button class="icon-btn" id="chat-menu">@</button></header>
     <main class="msgs" id="message-list"></main>
-    <footer class="composer"><input id="msg-input" placeholder="发消息，群聊可 @爸妈 等" maxlength="1500"><button class="send" id="send-btn">发送</button></footer>
+    <footer class="composer"><input id="msg-input" placeholder="发消息，群聊可 @妈妈 / @哥哥" maxlength="1500"><button class="send" id="send-btn">发送</button></footer>
   </section>
 
   <section class="overlay" id="settings-overlay">
@@ -74,10 +74,14 @@
         <div class="setting-row"><label>流式</label><div class="switch" id="stream-switch"></div></div>
         <div class="setting-row"><label>自动回复</label><div class="switch on" id="auto-reply-switch"></div></div>
         <div class="setting-row"><label>字体倍率</label><select id="font-scale"><option value="0.95">小</option><option value="1">标准</option><option value="1.1">大</option></select></div>
+        <div class="setting-row"><label>成员API</label><select id="agent-target"><option value="global">全局默认</option><option value="阿泽">阿泽（情人）</option><option value="爸爸">爸爸</option><option value="妈妈">妈妈</option><option value="爷爷">爷爷</option><option value="奶奶">奶奶</option><option value="外公">外公</option><option value="外婆">外婆</option><option value="哥哥">哥哥</option></select></div>
+        <div class="setting-row"><label>成员Endpoint</label><input id="agent-endpoint" placeholder="留空=跟随全局"></div>
+        <div class="setting-row"><label>成员API Key</label><input id="agent-api-key" type="password" placeholder="留空=跟随全局"></div>
+        <div class="setting-row"><label>成员Model</label><input id="agent-model" placeholder="留空=跟随全局"></div>
         <div class="setting-row"><label>系统提示词</label><textarea id="system-prompt"></textarea></div>
       </div>
       <div class="actions"><button class="btn primary" id="save-settings">保存设置</button><button class="btn" id="test-api">测试 API</button><button class="btn" id="normalize-endpoint">修正 Endpoint</button><button class="btn warn" id="reset-data">清空数据</button></div>
-      <p class="tiny">如果你配置了 DeepSeek 但不回消息，通常是 endpoint 填错。应为 <code>https://api.deepseek.com/chat/completions</code>（或 /v1/chat/completions）。本版本会自动修正并在失败时回退到本地角色回复，绝不沉默。</p>
+      <p class="tiny">本版不会出现“无回复无报错”：在线接口失败会提示原因并回退本地角色引擎。并且会自动清洗模型输出中重复的姓名前缀（如“阿泽：阿泽：...”）。</p>
     </main>
   </section>
 
@@ -85,26 +89,24 @@
 </div>
 
 <script>
-const STORAGE_KEY='wechat-selected-v1';
-const RELATION_PROMPT=`你在扮演一套微信角色系统。
-用户是男性，处在复杂关系中：
-1) 私聊对象：林妍（用户婚外关系对象，双方亲密，称呼偏暧昧但不过度露骨）。
-2) 家庭交流群：成员包括爸爸（张建国）、妈妈（李梅）、爷爷（张德福）、奶奶（王秀兰）、外公（李国华）、外婆（陈桂芳）、哥哥（张强）、用户本人（张浩）。
-每位家庭成员的说话风格要符合身份：
-- 爸爸：务实、关心工作和责任
-- 妈妈：细致、关心饮食作息
-- 爷爷奶奶：传统、亲情浓
-- 外公外婆：温和、叮嘱健康
-- 哥哥：直接、带点调侃
-在家庭群中支持 @某人 点名回复；被@的人优先回答。回复必须是中文，口语自然。`;
+const STORAGE_KEY='wechat-selected-v2';
+const RELATION_PROMPT=`你在扮演一套微信聊天角色系统。用户是女性“张雨”，请严格遵守：
+1) 私聊对象是男性情人“阿泽”。语气亲密、自然，不要自称AI。
+2) 家庭交流群成员：爸爸(张建国)、妈妈(李梅)、爷爷(张德福)、奶奶(王秀兰)、外公(李国华)、外婆(陈桂芳)、哥哥(张强)、用户本人(张雨)。
+3) 群聊里每个成员是独立生命体，能根据群上下文发言；如果出现@某成员，优先由被@成员回答。
+4) 禁止在回复前重复加名字前缀或引号（例如“阿泽：”“阿泽：阿泽：”等）。直接输出回复正文。`;
 
-const DEFAULT_STATE={settings:{provider:'deepseek',apiMode:'openai',endpoint:'https://api.deepseek.com/chat/completions',apiKey:'',model:'deepseek-chat',temperature:0.7,topP:1,maxTokens:1024,presencePenalty:0,frequencyPenalty:0,stop:'',seed:'',timeoutMs:25000,stream:false,autoReply:true,fontScale:'1',systemPrompt:RELATION_PROMPT},chats:[
-{id:1,type:'lover',name:'林妍❤️',unread:2,time:'11:18',preview:'你今晚会来吗？',members:['林妍'],messages:[{sender:'林妍',text:'你今晚会来吗？我有点想你。'},{sender:'me',text:'会，我晚点过去。'}]},
-{id:2,type:'family',name:'家庭交流群',unread:5,time:'09:46',preview:'@张浩 今天回家吃饭吗？',members:['爸爸','妈妈','爷爷','奶奶','外公','外婆','哥哥','张浩'],messages:[{sender:'妈妈',text:'@张浩 今天回家吃饭吗？'},{sender:'哥哥',text:'别又加班到太晚。'}]}
-]};
+const DEFAULT_STATE={
+  settings:{provider:'deepseek',apiMode:'openai',endpoint:'https://api.deepseek.com/chat/completions',apiKey:'',model:'deepseek-chat',temperature:0.7,topP:1,maxTokens:1024,presencePenalty:0,frequencyPenalty:0,stop:'',seed:'',timeoutMs:25000,stream:false,autoReply:true,fontScale:'1',systemPrompt:RELATION_PROMPT,agentConfigs:{}},
+  chats:[
+    {id:1,type:'lover',name:'阿泽❤️',unread:2,time:'11:18',preview:'今天会见我吗？',members:['阿泽'],messages:[{sender:'阿泽',text:'今天会见我吗？我想你了。'},{sender:'me',text:'要见，晚点去找你。'}]},
+    {id:2,type:'family',name:'家庭交流群',unread:4,time:'09:46',preview:'@张雨 今天回家吃饭吗？',members:['爸爸','妈妈','爷爷','奶奶','外公','外婆','哥哥','张雨'],messages:[{sender:'妈妈',text:'@张雨 今天回家吃饭吗？'},{sender:'哥哥',text:'别再忙到太晚了。'}]}
+  ],
+  memories:{爸爸:'',妈妈:'',爷爷:'',奶奶:'',外公:'',外婆:'',哥哥:'',阿泽:''}
+};
+
 const state=loadState();let activeChatId=null;
-
-function loadState(){try{const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');return s?{...DEFAULT_STATE,...s,settings:{...DEFAULT_STATE.settings,...(s.settings||{})}}:structuredClone(DEFAULT_STATE)}catch{return structuredClone(DEFAULT_STATE)}}
+function loadState(){try{const s=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');return s?{...DEFAULT_STATE,...s,settings:{...DEFAULT_STATE.settings,...(s.settings||{})},memories:{...DEFAULT_STATE.memories,...(s.memories||{})}}:structuredClone(DEFAULT_STATE)}catch{return structuredClone(DEFAULT_STATE)}}
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
 function avatarData(name){const colors=['#4f8df8','#09c15e','#f39c12','#8e44ad','#1abc9c','#e67e22'];const c=colors[name.charCodeAt(0)%colors.length];const t=encodeURIComponent(name.slice(0,1));return`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><rect width='100%25' height='100%25' fill='${c}'/><text x='50%25' y='58%25' text-anchor='middle' fill='white' font-size='56'>${t}</text></svg>`}
@@ -116,79 +118,174 @@ if(provider==='deepseek'){if(/^https:\/\/api\.deepseek\.com\/?$/.test(u))u='http
 if(provider==='openai'){if(/^https:\/\/api\.openai\.com\/?$/.test(u))u='https://api.openai.com/v1/chat/completions';if(u.endsWith('/v1'))u+='/chat/completions';if(!u.includes('/chat/completions'))u=u.replace(/\/$/,'')+'/v1/chat/completions';}
 return u;}
 
+function cleanModelReply(raw, speaker){
+  let t=(raw||'').trim();
+  for(let i=0;i<6;i++){
+    t=t.replace(/^\s*["“”']?\s*([\u4e00-\u9fa5A-Za-z0-9]{1,8})\s*[：:,-]\s*/,'');
+  }
+  const sp=speaker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const reg=new RegExp(`^(?:${sp}\s*[：:]\s*)+`,'i');
+  t=t.replace(reg,'').trim();
+  t=t.replace(/^["“”']+|["“”']+$/g,'').trim();
+  return t||'我在。';
+}
+
+function getAgentConfig(name){
+  const cfg=(state.settings.agentConfigs||{})[name]||{};
+  return {
+    endpoint: cfg.endpoint || state.settings.endpoint,
+    apiKey: cfg.apiKey || state.settings.apiKey,
+    model: cfg.model || state.settings.model,
+    provider: state.settings.provider
+  };
+}
+
 function renderChats(){const kw=document.getElementById('chat-search').value.trim();const list=state.chats.filter(c=>!kw||c.name.includes(kw)||c.preview.includes(kw));document.getElementById('chat-list').innerHTML=list.map(c=>`<li class='item' data-chat-id='${c.id}'><div class='avatar'><img src='${avatarData(c.name)}'></div><div class='meta'><div class='row'><div class='name'>${esc(c.name)}</div><div class='time'>${c.time}</div></div><div class='preview'>${esc(c.preview)}</div></div>${c.unread?`<span class='badge'>${c.unread}</span>`:''}</li>`).join('');document.getElementById('unread-total').textContent=state.chats.reduce((n,c)=>n+c.unread,0)}
-function openPage(page){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===`page-${page}`));document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.page===page));history.replaceState(null,'',`#/${page}`)}
+function openPage(page){const safe=['chats','contacts','discover','me'].includes(page)?page:'chats';document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===`page-${safe}`));document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.page===safe));history.replaceState(null,'',`#/${safe}`)}
 function findChat(id){return state.chats.find(c=>c.id===id)}
 
-function renderMessages(chat){const box=document.getElementById('message-list');box.innerHTML=chat.messages.map(m=>{const isMe=m.sender==='me'||m.sender==='张浩';const sender= isMe ? '' : `<div class='sender'>${esc(m.sender)}</div>`;return `<div class='msg ${isMe?'me':'col'}'>${sender}<div style='display:flex;gap:8px;${isMe?'justify-content:flex-end':''};width:100%'>${isMe?'':`<div class='avatar' style='width:36px;height:36px'><img src='${avatarData(m.sender)}'></div>`}<div class='bubble'>${esc(m.text)}</div></div></div>`}).join('');box.scrollTop=box.scrollHeight}
+function renderMessages(chat){const box=document.getElementById('message-list');box.innerHTML=chat.messages.map(m=>{const isMe=m.sender==='me'||m.sender==='张雨';const sender= isMe ? '' : `<div class='sender'>${esc(m.sender)}</div>`;return `<div class='msg ${isMe?'me':'col'}'>${sender}<div style='display:flex;gap:8px;${isMe?'justify-content:flex-end':''};width:100%'>${isMe?'':`<div class='avatar' style='width:36px;height:36px'><img src='${avatarData(m.sender)}'></div>`}<div class='bubble'>${esc(m.text)}</div></div></div>`}).join('');box.scrollTop=box.scrollHeight}
 
 function openChat(id){const c=findChat(id);if(!c)return;activeChatId=id;c.unread=0;document.getElementById('chat-title').textContent=c.name;document.getElementById('chat-overlay').classList.add('active');renderMessages(c);renderChats();saveState()}
 function closeChat(){activeChatId=null;document.getElementById('chat-overlay').classList.remove('active')}
 
-function buildHistoryForApi(chat,userText){const history=chat.messages.slice(-14).map(m=>({role:m.sender==='me'||m.sender==='张浩'?'user':'assistant',content:`${m.sender==='me'?'我':m.sender}：${m.text}`}));
-return [{role:'system',content:state.settings.systemPrompt||RELATION_PROMPT},{role:'system',content:chat.type==='lover'?'当前会话是与林妍的私聊。':'当前会话是家庭交流群，请保持多角色一致性并处理@点名。'},...history,{role:'user',content:userText}];}
+function pickMentionTarget(text,chat){const m=(text.match(/@([\u4e00-\u9fa5A-Za-z0-9]+)/)||[])[1];if(!m||chat.type!=='family')return null;const map={爸:'爸爸',妈:'妈妈',爷:'爷爷',奶:'奶奶',外公:'外公',外婆:'外婆',哥:'哥哥',哥哥:'哥哥',爸爸:'爸爸',妈妈:'妈妈',爷爷:'爷爷',奶奶:'奶奶'};return map[m]||chat.members.find(x=>x.includes(m))||null}
 
-function pickMentionTarget(text,chat){const m=(text.match(/@([\u4e00-\u9fa5A-Za-z0-9]+)/)||[])[1];if(!m||chat.type!=='family')return null;const map={爸:'爸爸',妈:'妈妈',爷爷:'爷爷',奶奶:'奶奶',外公:'外公',外婆:'外婆',哥:'哥哥',哥哥:'哥哥',爸爸:'爸爸',妈妈:'妈妈'};return map[m]||chat.members.find(x=>x.includes(m))||null}
-
-function localRoleReply(chat,userText){if(chat.type==='lover'){const lines=['我在等你，别让我等太久。','今天有点想黏着你。','你忙完告诉我，我给你留灯。'];return {sender:'林妍',text:lines[Math.floor(Math.random()*lines.length)]};}
-const target=pickMentionTarget(userText,chat);
-if(target){const dic={爸爸:'早点安排好工作，别太晚。',妈妈:'记得吃饭，胃不能空着。',爷爷:'年轻人也要注意身体。',奶奶:'有空就回家，奶奶给你做菜。',外公:'注意休息，别熬夜。',外婆:'天气凉了多穿点。',哥哥:'少废话，回个准信。'};return {sender:target,text:dic[target]||'收到，回头聊。'};}
-return {sender:'妈妈',text:'家里人都在关心你，看到消息回一下。'};
+function buildMessagesForAgent(chat,userText,agentName){
+  const roleHint=chat.type==='lover'?'你是男性情人阿泽，和用户(女性张雨)私聊。':'你是家庭群成员'+agentName+'，只代表自己发言，不代替他人。';
+  const memory=state.memories[agentName]||'';
+  const history=chat.messages.slice(-16).map(m=>({role:(m.sender==='me'||m.sender==='张雨')?'user':'assistant',content:`${m.sender==='me'?'张雨':m.sender}：${m.text}`}));
+  return [
+    {role:'system',content:state.settings.systemPrompt||RELATION_PROMPT},
+    {role:'system',content:roleHint},
+    {role:'system',content:`你的个人记忆：${memory||'暂无。'}`},
+    ...history,
+    {role:'user',content:userText}
+  ];
 }
 
-async function requestApiReply(chat,userText){const s=state.settings;const endpoint=normalizeEndpoint(s.endpoint,s.provider);const payload={model:s.model,messages:buildHistoryForApi(chat,userText),temperature:Number(s.temperature),top_p:Number(s.topP),max_tokens:Number(s.maxTokens),presence_penalty:Number(s.presencePenalty),frequency_penalty:Number(s.frequencyPenalty),stream:!!s.stream};
-if((s.stop||'').trim())payload.stop=s.stop.split('|').map(x=>x.trim()).filter(Boolean); if(s.seed!=='')payload.seed=Number(s.seed);
-const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),Number(s.timeoutMs)||25000);
-try{const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.apiKey}`},body:JSON.stringify(payload),signal:controller.signal});
-if(!res.ok){const tx=await res.text();throw new Error(`HTTP ${res.status}: ${tx.slice(0,120)}`)}
-if(payload.stream){const reader=res.body?.getReader();if(!reader)throw new Error('流式响应不可读');const decoder=new TextDecoder();let buf='';while(true){const {done,value}=await reader.read();if(done)break;buf+=decoder.decode(value,{stream:true});}
-const lines=buf.split('\n').filter(l=>l.includes('data:'));let text='';for(const l of lines){const raw=l.replace(/^.*data:\s*/,'').trim();if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);text+=j?.choices?.[0]?.delta?.content||''}catch{}}
-if(!text.trim())throw new Error('流式未返回文本');return text.trim();}
-const data=await res.json();const out=data?.choices?.[0]?.message?.content?.trim();if(!out)throw new Error('API 返回为空');return out;}finally{clearTimeout(timer)}
+function localRoleReply(chat,userText,target){
+  if(chat.type==='lover'){
+    const lines=['我在，刚刚在忙，现在只想好好和你说话。','今天挺想你的，晚一点我们见面。','你说我都在听，别担心。'];
+    return {sender:'阿泽',text:lines[Math.floor(Math.random()*lines.length)]};
+  }
+  const who=target||['爸爸','妈妈','爷爷','奶奶','外公','外婆','哥哥'][Math.floor(Math.random()*7)];
+  const dic={爸爸:'你先把自己照顾好，其他事慢慢来。',妈妈:'记得按时吃饭，别空着肚子。',爷爷:'有空回家坐坐，家里都惦记你。',奶奶:'最近天凉，出门多加件衣服。',外公:'别总熬夜，身体最重要。',外婆:'看到消息回一句，大家安心。',哥哥:'行了，先把你那边安排好。'};
+  return {sender:who,text:dic[who]||'收到。'};
 }
 
-async function generateReply(chat,userText){const s=state.settings;
-if(!s.autoReply) return null;
-if(s.apiMode==='openai' && s.apiKey){
+async function requestApiReply(chat,userText,agentName){
+  const s=state.settings;const agent=getAgentConfig(agentName);
+  const endpoint=normalizeEndpoint(agent.endpoint,s.provider);
+  const payload={model:agent.model,messages:buildMessagesForAgent(chat,userText,agentName),temperature:Number(s.temperature),top_p:Number(s.topP),max_tokens:Number(s.maxTokens),presence_penalty:Number(s.presencePenalty),frequency_penalty:Number(s.frequencyPenalty),stream:!!s.stream};
+  if((s.stop||'').trim())payload.stop=s.stop.split('|').map(x=>x.trim()).filter(Boolean);
+  if(s.seed!=='')payload.seed=Number(s.seed);
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),Number(s.timeoutMs)||25000);
   try{
-    const text=await requestApiReply(chat,userText);
-    const mention=pickMentionTarget(userText,chat);
-    return {sender:chat.type==='lover'?'林妍':(mention||'妈妈'),text};
-  }catch(err){toast(`API失败，已回退本地角色：${err.message}`);return localRoleReply(chat,userText);}
+    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${agent.apiKey}`},body:JSON.stringify(payload),signal:controller.signal});
+    if(!res.ok){const tx=await res.text();throw new Error(`HTTP ${res.status}: ${tx.slice(0,120)}`)}
+    if(payload.stream){const reader=res.body?.getReader();if(!reader)throw new Error('流式响应不可读');const decoder=new TextDecoder();let buf='';while(true){const {done,value}=await reader.read();if(done)break;buf+=decoder.decode(value,{stream:true})}
+      const lines=buf.split('\n').filter(l=>l.includes('data:'));let text='';for(const l of lines){const raw=l.replace(/^.*data:\s*/,'').trim();if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);text+=j?.choices?.[0]?.delta?.content||''}catch{}}
+      if(!text.trim())throw new Error('流式未返回文本');
+      return cleanModelReply(text,agentName);
+    }
+    const data=await res.json();const out=data?.choices?.[0]?.message?.content?.trim();if(!out)throw new Error('API 返回为空');
+    return cleanModelReply(out,agentName);
+  } finally { clearTimeout(timer); }
 }
-if(s.apiMode==='openai' && !s.apiKey){toast('未填写 API Key，已使用本地角色引擎');}
-return localRoleReply(chat,userText);
+
+function updateMemory(agentName,userText,replyText){
+  const old=state.memories[agentName]||'';
+  const chunk=`用户:${userText} | ${agentName}:${replyText}`;
+  state.memories[agentName]=(old?old+' || ':'')+chunk;
+  if(state.memories[agentName].length>400) state.memories[agentName]=state.memories[agentName].slice(-400);
+}
+
+async function replyByAgent(chat,userText,agentName){
+  const s=state.settings;
+  if(!s.autoReply) return null;
+  const agentCfg=getAgentConfig(agentName);
+  const canOnline=s.apiMode==='openai' && !!agentCfg.apiKey;
+  if(canOnline){
+    try{
+      const text=await requestApiReply(chat,userText,agentName);
+      updateMemory(agentName,userText,text);
+      return {sender:agentName,text};
+    }catch(err){toast(`API失败(${agentName})，回退本地：${err.message}`);const fb=localRoleReply(chat,userText,agentName);updateMemory(agentName,userText,fb.text);return fb;}
+  }
+  if(s.apiMode==='openai' && !agentCfg.apiKey) toast(`${agentName} 未配置API Key，使用本地引擎`);
+  const fb=localRoleReply(chat,userText,agentName);updateMemory(agentName,userText,fb.text);return fb;
+}
+
+async function generateGroupReplies(chat,userText){
+  const target=pickMentionTarget(userText,chat);
+  const replies=[];
+  if(target){
+    const r=await replyByAgent(chat,userText,target);
+    if(r) replies.push(r);
+    return replies;
+  }
+  const members=['爸爸','妈妈','爷爷','奶奶','外公','外婆','哥哥'];
+  const first=members[Math.floor(Math.random()*members.length)];
+  const second=Math.random()<0.45?members.filter(x=>x!==first)[Math.floor(Math.random()*6)]:null;
+  const r1=await replyByAgent(chat,userText,first); if(r1) replies.push(r1);
+  if(second){const r2=await replyByAgent(chat,userText,second); if(r2) replies.push(r2);}
+  return replies;
 }
 
 async function sendMessage(){const input=document.getElementById('msg-input');const text=input.value.trim();if(!text||!activeChatId)return;const chat=findChat(activeChatId);
-chat.messages.push({sender:'me',text});chat.preview=text;chat.time=nowHM();input.value='';renderMessages(chat);renderChats();saveState();
-const reply=await generateReply(chat,text);if(!reply)return;
-chat.messages.push(reply);chat.preview=`${reply.sender}：${reply.text}`;chat.time=nowHM();if(activeChatId!==chat.id)chat.unread+=1;renderMessages(chat);renderChats();saveState();}
-
-function applySettingsUI(){const s=state.settings;document.getElementById('provider').value=s.provider;document.getElementById('api-mode').value=s.apiMode;document.getElementById('api-endpoint').value=s.endpoint;document.getElementById('api-key').value=s.apiKey;document.getElementById('api-model').value=s.model;document.getElementById('api-temperature').value=s.temperature;document.getElementById('api-top-p').value=s.topP;document.getElementById('api-max-tokens').value=s.maxTokens;document.getElementById('api-presence-penalty').value=s.presencePenalty;document.getElementById('api-frequency-penalty').value=s.frequencyPenalty;document.getElementById('api-stop').value=s.stop;document.getElementById('api-seed').value=s.seed;document.getElementById('api-timeout').value=s.timeoutMs;document.getElementById('stream-switch').classList.toggle('on',!!s.stream);document.getElementById('auto-reply-switch').classList.toggle('on',!!s.autoReply);document.getElementById('font-scale').value=s.fontScale;document.getElementById('system-prompt').value=s.systemPrompt;document.documentElement.style.setProperty('--font-scale',s.fontScale||'1')}
-function saveSettingsFromForm(){const s=state.settings;s.provider=document.getElementById('provider').value;s.apiMode=document.getElementById('api-mode').value;s.endpoint=normalizeEndpoint(document.getElementById('api-endpoint').value,s.provider);s.apiKey=document.getElementById('api-key').value.trim();s.model=document.getElementById('api-model').value.trim();s.temperature=document.getElementById('api-temperature').value||0.7;s.topP=document.getElementById('api-top-p').value||1;s.maxTokens=document.getElementById('api-max-tokens').value||1024;s.presencePenalty=document.getElementById('api-presence-penalty').value||0;s.frequencyPenalty=document.getElementById('api-frequency-penalty').value||0;s.stop=document.getElementById('api-stop').value;s.seed=document.getElementById('api-seed').value;s.timeoutMs=document.getElementById('api-timeout').value||25000;s.stream=document.getElementById('stream-switch').classList.contains('on');s.autoReply=document.getElementById('auto-reply-switch').classList.contains('on');s.fontScale=document.getElementById('font-scale').value;s.systemPrompt=document.getElementById('system-prompt').value.trim()||RELATION_PROMPT;saveState();applySettingsUI()}
-
-function bindEvents(){
-document.getElementById('tabbar').addEventListener('click',e=>{const t=e.target.closest('.tab');if(t)openPage(t.dataset.page)});
-document.getElementById('chat-list').addEventListener('click',e=>{const x=e.target.closest('[data-chat-id]');if(x)openChat(Number(x.dataset.chatId))});
-document.getElementById('chat-search').addEventListener('input',renderChats);
-document.querySelectorAll('[data-action]').forEach(el=>el.addEventListener('click',()=>toast('功能已连接：'+el.textContent.trim())));
-document.getElementById('chat-back').addEventListener('click',closeChat);
-document.getElementById('send-btn').addEventListener('click',sendMessage);
-document.getElementById('msg-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();sendMessage()}});
-document.getElementById('chat-menu').addEventListener('click',()=>{const c=findChat(activeChatId);if(!c)return; if(c.type!=='family'){toast('私聊无需@成员');return;}document.getElementById('msg-input').value+='@妈妈 ';document.getElementById('msg-input').focus();});
-const openSettings=()=>document.getElementById('settings-overlay').classList.add('active');document.getElementById('open-settings').addEventListener('click',openSettings);document.getElementById('open-settings-top').addEventListener('click',openSettings);document.getElementById('settings-back').addEventListener('click',()=>document.getElementById('settings-overlay').classList.remove('active'));
-document.getElementById('stream-switch').addEventListener('click',e=>e.currentTarget.classList.toggle('on'));document.getElementById('auto-reply-switch').addEventListener('click',e=>e.currentTarget.classList.toggle('on'));
-document.getElementById('provider').addEventListener('change',e=>{const p=e.target.value;if(p==='deepseek'){document.getElementById('api-endpoint').value='https://api.deepseek.com/chat/completions';document.getElementById('api-model').value='deepseek-chat'}if(p==='openai'){document.getElementById('api-endpoint').value='https://api.openai.com/v1/chat/completions';if(!document.getElementById('api-model').value)document.getElementById('api-model').value='gpt-4o-mini'}toast('已应用提供商模板')});
-document.getElementById('save-settings').addEventListener('click',()=>{saveSettingsFromForm();toast('设置已保存')});
-document.getElementById('normalize-endpoint').addEventListener('click',()=>{const p=document.getElementById('provider').value;document.getElementById('api-endpoint').value=normalizeEndpoint(document.getElementById('api-endpoint').value,p);toast('Endpoint 已修正')});
-document.getElementById('test-api').addEventListener('click',async()=>{saveSettingsFromForm();const c=findChat(1);try{const r=await requestApiReply(c,'请只回复：连接成功');toast('测试成功：'+r.slice(0,20));}catch(err){toast('测试失败：'+err.message)}});
-document.getElementById('reset-data').addEventListener('click',()=>{localStorage.removeItem(STORAGE_KEY);location.reload()});
-document.getElementById('new-chat-btn').addEventListener('click',()=>toast('当前版本固定两个精选对话'));
-window.addEventListener('hashchange',()=>{const p=(location.hash||'#/chats').replace('#/','');if(['chats','contacts','discover','me'].includes(p))openPage(p)});
+  chat.messages.push({sender:'me',text});chat.preview=text;chat.time=nowHM();input.value='';renderMessages(chat);renderChats();saveState();
+  let replies=[];
+  if(chat.type==='lover'){const r=await replyByAgent(chat,text,'阿泽');if(r)replies=[r];}
+  else{replies=await generateGroupReplies(chat,text);}
+  if(!replies.length)return;
+  for(const r of replies) chat.messages.push(r);
+  const last=replies[replies.length-1];
+  chat.preview=`${last.sender}：${last.text}`;chat.time=nowHM();
+  renderMessages(chat);renderChats();saveState();
 }
 
-function boot(){applySettingsUI();renderChats();bindEvents();openPage((location.hash||'#/chats').replace('#/',''));toast('精选对话系统已就绪')}
+function applySettingsUI(){const s=state.settings;document.getElementById('provider').value=s.provider;document.getElementById('api-mode').value=s.apiMode;document.getElementById('api-endpoint').value=s.endpoint;document.getElementById('api-key').value=s.apiKey;document.getElementById('api-model').value=s.model;document.getElementById('api-temperature').value=s.temperature;document.getElementById('api-top-p').value=s.topP;document.getElementById('api-max-tokens').value=s.maxTokens;document.getElementById('api-presence-penalty').value=s.presencePenalty;document.getElementById('api-frequency-penalty').value=s.frequencyPenalty;document.getElementById('api-stop').value=s.stop;document.getElementById('api-seed').value=s.seed;document.getElementById('api-timeout').value=s.timeoutMs;document.getElementById('stream-switch').classList.toggle('on',!!s.stream);document.getElementById('auto-reply-switch').classList.toggle('on',!!s.autoReply);document.getElementById('font-scale').value=s.fontScale;document.getElementById('system-prompt').value=s.systemPrompt;document.documentElement.style.setProperty('--font-scale',s.fontScale||'1');applyAgentConfigUI()}
+
+function applyAgentConfigUI(){
+  const target=document.getElementById('agent-target').value;
+  const cfg=(state.settings.agentConfigs||{})[target]||{};
+  document.getElementById('agent-endpoint').value=cfg.endpoint||'';
+  document.getElementById('agent-api-key').value=cfg.apiKey||'';
+  document.getElementById('agent-model').value=cfg.model||'';
+}
+
+function saveSettingsFromForm(){const s=state.settings;s.provider=document.getElementById('provider').value;s.apiMode=document.getElementById('api-mode').value;s.endpoint=normalizeEndpoint(document.getElementById('api-endpoint').value,s.provider);s.apiKey=document.getElementById('api-key').value.trim();s.model=document.getElementById('api-model').value.trim();s.temperature=document.getElementById('api-temperature').value||0.7;s.topP=document.getElementById('api-top-p').value||1;s.maxTokens=document.getElementById('api-max-tokens').value||1024;s.presencePenalty=document.getElementById('api-presence-penalty').value||0;s.frequencyPenalty=document.getElementById('api-frequency-penalty').value||0;s.stop=document.getElementById('api-stop').value;s.seed=document.getElementById('api-seed').value;s.timeoutMs=document.getElementById('api-timeout').value||25000;s.stream=document.getElementById('stream-switch').classList.contains('on');s.autoReply=document.getElementById('auto-reply-switch').classList.contains('on');s.fontScale=document.getElementById('font-scale').value;s.systemPrompt=document.getElementById('system-prompt').value.trim()||RELATION_PROMPT;
+  const target=document.getElementById('agent-target').value;
+  const configs={...(s.agentConfigs||{})};
+  if(target!=='global'){
+    configs[target]={endpoint:document.getElementById('agent-endpoint').value.trim(),apiKey:document.getElementById('agent-api-key').value.trim(),model:document.getElementById('agent-model').value.trim()};
+  }
+  s.agentConfigs=configs;
+  saveState();applySettingsUI()}
+
+function bindEvents(){
+  document.getElementById('tabbar').addEventListener('click',e=>{const t=e.target.closest('.tab');if(t)openPage(t.dataset.page)});
+  document.getElementById('chat-list').addEventListener('click',e=>{const x=e.target.closest('[data-chat-id]');if(x)openChat(Number(x.dataset.chatId))});
+  document.getElementById('chat-search').addEventListener('input',renderChats);
+  document.querySelectorAll('[data-action]').forEach(el=>el.addEventListener('click',()=>toast('功能已连接：'+el.textContent.trim())));
+  document.getElementById('chat-back').addEventListener('click',closeChat);
+  document.getElementById('send-btn').addEventListener('click',sendMessage);
+  document.getElementById('msg-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();sendMessage()}});
+  document.getElementById('chat-menu').addEventListener('click',()=>{const c=findChat(activeChatId);if(!c)return; if(c.type!=='family'){toast('私聊无需@成员');return;}document.getElementById('msg-input').value+='@妈妈 ';document.getElementById('msg-input').focus();});
+  const openSettings=()=>document.getElementById('settings-overlay').classList.add('active');document.getElementById('open-settings').addEventListener('click',openSettings);document.getElementById('open-settings-top').addEventListener('click',openSettings);document.getElementById('settings-back').addEventListener('click',()=>document.getElementById('settings-overlay').classList.remove('active'));
+  document.getElementById('stream-switch').addEventListener('click',e=>e.currentTarget.classList.toggle('on'));document.getElementById('auto-reply-switch').addEventListener('click',e=>e.currentTarget.classList.toggle('on'));
+  document.getElementById('provider').addEventListener('change',e=>{const p=e.target.value;if(p==='deepseek'){document.getElementById('api-endpoint').value='https://api.deepseek.com/chat/completions';document.getElementById('api-model').value='deepseek-chat'}if(p==='openai'){document.getElementById('api-endpoint').value='https://api.openai.com/v1/chat/completions';if(!document.getElementById('api-model').value)document.getElementById('api-model').value='gpt-4o-mini'}toast('已应用提供商模板')});
+  document.getElementById('agent-target').addEventListener('change',applyAgentConfigUI);
+  document.getElementById('save-settings').addEventListener('click',()=>{saveSettingsFromForm();toast('设置已保存')});
+  document.getElementById('normalize-endpoint').addEventListener('click',()=>{const p=document.getElementById('provider').value;document.getElementById('api-endpoint').value=normalizeEndpoint(document.getElementById('api-endpoint').value,p);toast('Endpoint 已修正')});
+  document.getElementById('test-api').addEventListener('click',async()=>{saveSettingsFromForm();const c=findChat(1);try{const r=await requestApiReply(c,'请只回复：连接成功','阿泽');toast('测试成功：'+r.slice(0,20));}catch(err){toast('测试失败：'+err.message)}});
+  document.getElementById('reset-data').addEventListener('click',()=>{localStorage.removeItem(STORAGE_KEY);location.reload()});
+  document.getElementById('new-chat-btn').addEventListener('click',()=>toast('当前版本固定两个精选对话'));
+  window.addEventListener('hashchange',()=>openPage((location.hash||'#/chats').replace('#/','')));
+}
+
+function boot(){applySettingsUI();renderChats();bindEvents();openPage((location.hash||'#/chats').replace('#/',''));toast('完整聊天系统已就绪')}
 boot();
 </script>
 </body>
