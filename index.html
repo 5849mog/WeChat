@@ -1,0 +1,2420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>微信</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background-color: #ededed;
+            overflow: hidden;
+            height: 100vh;
+            touch-action: manipulation;
+        }
+
+        .app-container {
+            position: relative;
+            max-width: 480px;
+            height: 100vh;
+            margin: 0 auto;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background-color: #ededed;
+        }
+
+        .page {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+            background-color: #ededed;
+        }
+        .page.active {
+            display: flex;
+        }
+
+        .header {
+            height: 44px;
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 12px;
+            border-bottom: 1px solid #dcdcdc;
+            position: relative;
+            z-index: 5;
+        }
+        
+        #page-chats .header, #page-moments .header {
+            background-color: #ededed;
+            border-bottom: none;
+        }
+
+        .header-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #000;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 20px;
+        }
+
+        .header-btn {
+            font-size: 22px;
+            color: #000;
+            font-weight: bold;
+        }
+        .header-btn-text {
+            font-size: 16px;
+            color: #000;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            background-color: #fff;
+            position: relative;
+            z-index: 1;
+        }
+        #page-chats .content, #page-moments .content {
+            background-color: #ededed;
+        }
+
+        .tab-bar {
+            display: flex;
+            height: 50px;
+            background-color: #f7f7f7;
+            border-top: 1px solid #dcdcdc;
+            position: relative;
+            z-index: 10;
+        }
+
+        .tab {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #7f8389;
+            font-size: 10px;
+            transition: color 0.1s ease;
+        }
+
+        .tab.active {
+            color: #07c160;
+        }
+
+        .tab-icon {
+            font-size: 22px;
+            margin-bottom: 3px;
+        }
+        .tab-icon img {
+            width: 22px;
+            height: 22px;
+        }
+
+        .chat-list {
+            list-style: none;
+            padding-top: 0;
+        }
+
+        .chat-item {
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            border-bottom: 1px solid #e5e5e5;
+            transition: background-color 0.1s ease;
+            position: relative;
+        }
+
+        .chat-item:active {
+            background-color: #f0f0f0;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 6px;
+            margin-right: 12px;
+            background-color: #ccc;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .chat-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .chat-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .chat-name {
+            font-size: 16px;
+            color: #000;
+            font-weight: 400;
+        }
+
+        .chat-time {
+            font-size: 12px;
+            color: #b2b2b2;
+            white-space: nowrap;
+            margin-left: 8px;
+        }
+
+        .chat-message {
+            font-size: 14px;
+            color: #999999;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #fa5151;
+            color: #fff;
+            border-radius: 9px;
+            font-size: 11px;
+            padding: 1px 5px;
+            height: 18px;
+            min-width: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .conversation {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f0f0f0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 20;
+        }
+
+        .conversation.active {
+            display: flex;
+        }
+
+        .conversation-header {
+            height: 44px;
+            background-color: #f7f7f7;
+            display: flex;
+            align-items: center;
+            padding: 0 8px 0 0;
+            position: relative;
+            border-bottom: 1px solid #dcdcdc;
+            flex-shrink: 0;
+        }
+
+        .back-btn {
+            font-size: 20px;
+            color: #000;
+            padding: 10px 15px 10px 10px;
+        }
+
+        .conversation-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #000;
+            text-align: center;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding-right: 30px;
+        }
+
+        .conversation-options {
+            font-size: 22px;
+            color: #000;
+            padding: 10px;
+            position: absolute;
+            right: 8px;
+        }
+
+        #chat-options-menu {
+            display: none;
+            position: absolute;
+            top: 45px;
+            right: 8px;
+            background-color: #4c4c4c;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 100;
+            overflow: hidden;
+        }
+        .chat-option-item {
+            padding: 12px 18px;
+            cursor: pointer;
+            color: white;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+        .chat-option-item:not(:last-child) {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .chat-option-item:active {
+            background-color: #3a3a3a;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 12px;
+            background-color: #ededed;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .message {
+            margin-bottom: 18px;
+            display: flex;
+            align-items: flex-start;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.received {
+            justify-content: flex-start;
+        }
+
+        .message.sent {
+            justify-content: flex-end;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+            background-color: #ccc;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .message.sent .message-avatar {
+            order: 1;
+            margin-right: 0;
+            margin-left: 10px;
+        }
+
+        .message-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+            object-fit: cover;
+        }
+
+        .message-content {
+            max-width: calc(100% - 100px);
+        }
+
+        .message-bubble {
+            padding: 10px 12px;
+            border-radius: 8px;
+            position: relative;
+            word-break: break-word;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+
+        .message.received .message-bubble {
+            background-color: #fff;
+            color: #000;
+        }
+
+        .message.sent .message-bubble {
+            background-color: #95ec69;
+            color: #000;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #b2b2b2;
+            margin-top: 6px;
+            text-align: center;
+            clear: both;
+        }
+        .message .message-content .message-time {
+            text-align: initial;
+            margin-left: 5px;
+            margin-right: 5px;
+            display: none;
+        }
+
+        .input-area {
+            background-color: #f7f7f7;
+            padding: 8px 6px;
+            display: flex;
+            align-items: flex-end;
+            border-top: 1px solid #dcdcdc;
+            flex-shrink: 0;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        .input-button {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #505050;
+            font-size: 26px;
+            margin: 0 3px;
+            cursor: pointer;
+        }
+
+        .message-input {
+            flex: 1;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 16px;
+            background-color: #fff;
+            margin: 0 4px;
+            outline: none;
+            max-height: 80px;
+            min-height: 20px;
+            line-height: 1.4;
+        }
+
+        .send-button {
+            background-color: #07c160;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0 15px;
+            height: 36px;
+            font-size: 15px;
+            font-weight: 500;
+            margin-left: 4px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .send-button.active {
+            display: flex;
+            animation: fadeIn 0.1s ease;
+        }
+
+        .slide-in {
+            animation: slideIn 0.25s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+        }
+
+        .slide-out {
+            animation: slideOut 0.25s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); }
+            to { transform: translateX(100%); }
+        }
+
+        .ripple {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.08);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.5s linear;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        .search-container {
+            padding: 8px 12px;
+            background-color: #ededed;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        
+        .search-bar {
+            background-color: #fff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+        }
+        
+        .search-icon {
+            color: #b2b2b2;
+            margin-right: 6px;
+            font-size: 15px;
+        }
+        
+        .search-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            width: 100%;
+            font-size: 15px;
+            color: #333;
+        }
+        .search-input::placeholder {
+            color: #b2b2b2;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-color: #ededed;
+        }
+        
+        .loading-dots {
+            display: flex;
+        }
+        
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #b2b2b2;
+            margin: 0 4px;
+            animation: loadingDot 1.4s infinite ease-in-out both;
+        }
+        
+        .loading-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+        
+        .loading-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+        
+        @keyframes loadingDot {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .pull-indicator {
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform: translateY(-50px);
+            transition: transform 0.2s ease;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: #ededed;
+        }
+        
+        .pull-circle {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #07c160;
+            border-top-color: transparent;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .pull-text {
+            color: #07c160;
+            font-size: 14px;
+        }
+        
+        .refreshing .pull-circle {
+            animation: rotate 0.8s infinite linear;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .emoji-picker {
+            display: none;
+            background-color: #f7f7f7;
+            height: 220px;
+            border-top: 1px solid #dcdcdc;
+            padding: 15px;
+            overflow-y: auto;
+            flex-shrink: 0;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+        
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+            gap: 10px;
+        }
+        
+        .emoji {
+            font-size: 26px;
+            text-align: center;
+            padding: 5px;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        
+        .emoji:active {
+            background-color: #e0e0e0;
+        }
+
+        .new-message-indicator {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 18px;
+            font-size: 13px;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+        }
+        
+        .new-message-indicator.show {
+            opacity: 1;
+            animation: popIn 0.3s ease;
+            pointer-events: auto;
+        }
+        
+        @keyframes popIn {
+            0% { transform: translateX(-50%) scale(0.8); }
+            50% { transform: translateX(-50%) scale(1.1); }
+            100% { transform: translateX(-50%) scale(1); }
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background-color: #fff;
+            border-bottom: 1px solid #e5e5e5;
+            font-size: 16px;
+            color: #000;
+            cursor: pointer;
+        }
+        .list-item:active {
+            background-color: #f0f0f0;
+        }
+        .list-item-icon {
+            font-size: 22px;
+            margin-right: 16px;
+            color: #505050;
+            width: 24px;
+            text-align: center;
+        }
+        .list-item-icon img {
+            width: 22px;
+            height: 22px;
+        }
+        .list-item-text {
+            flex: 1;
+        }
+        .list-item-arrow {
+            font-size: 14px;
+            color: #b2b2b2;
+        }
+        .list-section-gap {
+            height: 8px;
+            background-color: #ededed;
+            border-top: 1px solid #e5e5e5;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .list-section-gap.no-border {
+            border: none;
+        }
+        #page-me .list-section-gap:first-of-type {
+            height: 15px;
+        }
+
+        .contact-group-title {
+            padding: 4px 16px;
+            font-size: 13px;
+            color: #888;
+            background-color: #ededed;
+        }
+        #contacts-list .avatar {
+            width: 40px;
+            height: 40px;
+        }
+
+        .me-profile-header {
+            padding: 20px 16px;
+            padding-bottom: 30px;
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .me-profile-header .avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 8px;
+            margin-right: 16px;
+        }
+        .me-profile-info {
+            flex: 1;
+        }
+        .me-profile-name {
+            font-size: 20px;
+            font-weight: 500;
+            color: #000;
+            margin-bottom: 8px;
+        }
+        .me-profile-id {
+            font-size: 14px;
+            color: #888;
+            display: flex;
+            align-items: center;
+        }
+        .me-profile-id span {
+            margin-right: 10px;
+        }
+        .me-profile-qrcode {
+            font-size: 18px;
+            color: #888;
+        }
+        .me-profile-arrow {
+            font-size: 16px;
+            color: #b2b2b2;
+        }
+
+        /* Moments Page Styles */
+        .moments-header-bg {
+            height: 200px;
+            background: url('https://picsum.photos/480/200') no-repeat center;
+            background-size: cover;
+            position: relative;
+        }
+        .moments-profile {
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .moments-profile .avatar {
+            width: 64px;
+            height: 64px;
+            border: 2px solid #fff;
+        }
+        .moments-profile-name {
+            font-size: 18px;
+            font-weight: 500;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            margin-right: 10px;
+        }
+        .moments-list {
+            list-style: none;
+            padding: 0;
+            background-color: #fff;
+        }
+        .moment-item {
+            padding: 15px;
+            border-bottom: 1px solid #e5e5e5;
+            background-color: #fff;
+        }
+        .moment-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .moment-content {
+            font-size: 16px;
+            color: #000;
+            line-height: 1.5;
+            margin-bottom: 10px;
+            word-break: break-word;
+        }
+        .moment-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .moment-image {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .moment-time {
+            font-size: 12px;
+            color: #b2b2b2;
+            margin-bottom: 10px;
+        }
+        .moment-actions {
+            display: flex;
+            justify-content: flex-end;
+            position: relative;
+        }
+        .moment-action-btn {
+            font-size: 14px;
+            color: #576b95;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .moment-interactions {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: -10px;
+            background-color: #4c4c4c;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 10;
+            flex-direction: row;
+            padding: 5px;
+        }
+        .moment-interactions.show {
+            display: flex;
+        }
+        .moment-interaction-btn {
+            padding: 8px 15px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .moment-interaction-btn:active {
+            background-color: #3a3a3a;
+        }
+        .moment-likes, .moment-comments {
+            background-color: #f7f7f7;
+            padding: 10px;
+            border-top: 1px solid #e5e5e5;
+            font-size: 14px;
+            color: #000;
+        }
+        .moment-likes:empty, .moment-comments:empty {
+            display: none;
+        }
+        .moment-likes span, .moment-comment-user {
+            color: #576b95;
+            cursor: pointer;
+        }
+        .moment-comment {
+            margin-bottom: 8px;
+        }
+        .moment-comment-content {
+            color: #000;
+        }
+
+        /* Post Creation Modal */
+        .post-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #fff;
+            z-index: 30;
+            flex-direction: column;
+        }
+        .post-modal.active {
+            display: flex;
+        }
+        .post-modal-header {
+            height: 44px;
+            background-color: #f7f7f7;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            border-bottom: 1px solid #dcdcdc;
+        }
+        .post-modal-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #000;
+            flex: 1;
+            text-align: center;
+        }
+        .post-modal-cancel, .post-modal-submit {
+            font-size: 16px;
+            color: #07c160;
+            padding: 10px;
+            cursor: pointer;
+        }
+        .post-modal-cancel {
+            color: #000;
+        }
+        .post-modal-content {
+            flex: 1;
+            padding: 15px;
+            background-color: #fff;
+            overflow-y: auto;
+        }
+        .post-textarea {
+            width: 100%;
+            min-height: 150px;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            resize: none;
+            padding: 10px;
+            background-color: #f7f7f7;
+            border-radius: 6px;
+        }
+        .post-images-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .post-image-preview {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .post-image-add {
+            width: 100%;
+            aspect-ratio: 1;
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            color: #b2b2b2;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .contacts-list {
+    list-style: none;
+    padding: 0;
+    background-color: #fff;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    background-color: #fff;
+    border-bottom: 1px solid #e5e5e5;
+    transition: background-color 0.1s ease;
+}
+
+.contact-item:active {
+    background-color: #f0f0f0;
+}
+
+.contact-item .avatar {
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+}
+
+.contact-name {
+    font-size: 16px;
+    color: #000;
+}
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div id="page-chats" class="page active">
+            <div class="header">
+                <div class="header-title">微信 (<span id="unread-count-title">0</span>)</div>
+                <div class="header-buttons">
+                    <div class="header-btn" style="font-size:20px;">🔍</div>
+                    <div class="header-btn">+</div>
+                </div>
+            </div>
+            <div class="search-container">
+                <div class="search-bar">
+                    <div class="search-icon">🔍</div>
+                    <input type="text" class="search-input" id="main-search-input" placeholder="搜索">
+                </div>
+            </div>
+            <div class="content">
+                <div class="pull-indicator">
+                    <div class="pull-circle"></div>
+                    <div class="pull-text">下拉刷新</div>
+                </div>
+                <ul class="chat-list" id="chat-list"></ul>
+                <div class="loading" style="display: none;">
+                    <div class="loading-dots">
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <div id="page-contacts" class="page">
+    <div class="header">
+        <div class="header-title">通讯录</div>
+        <div class="header-buttons">
+            <div class="header-btn-text" style="font-size: 16px;">添加朋友</div>
+        </div>
+    </div>
+    <div class="search-container">
+        <div class="search-bar">
+            <div class="search-icon">🔍</div>
+            <input type="text" class="search-input" id="contacts-search-input" placeholder="搜索">
+        </div>
+    </div>
+    <div class="content" id="contacts-content">
+        <ul id="contacts-list-detailed">
+            <li class="list-item">
+                <span class="list-item-icon" style="color: #ffa500;">👥</span>
+                <span class="list-item-text">新的朋友</span>
+            </li>
+            <li class="list-item">
+                <span class="list-item-icon" style="color: #07c160;">🗣️</span>
+                <span class="list-item-text">群聊</span>
+            </li>
+            <li class="list-item">
+                <span class="list-item-icon" style="color: #4a90e2;">🏷️</span>
+                <span class="list-item-text">标签</span>
+            </li>
+            <li class="list-item">
+                <span class="list-item-icon" style="color: #333;">📢</span>
+                <span class="list-item-text">公众号</span>
+            </li>
+        </ul>
+        <div class="list-section-gap"></div>
+        <ul id="contacts-list" class="contacts-list"></ul>
+    </div>
+</div>
+
+        <div id="page-discover" class="page">
+            <div class="header">
+                <div class="header-title">发现</div>
+            </div>
+            <div class="content" id="discover-content">
+                <ul style="padding:0; list-style:none;">
+                    <li class="list-section-gap no-border" style="height:8px;"></li>
+                    <li class="list-item" data-action="moments">
+                        <span class="list-item-icon">🖼️</span>
+                        <span class="list-item-text">朋友圈</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-section-gap"></li>
+                    <li class="list-item">
+                        <span class="list-item-icon">📹</span>
+                        <span class="list-item-text">视频号</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-item">
+                        <span class="list-item-icon">🤳</span>
+                        <span class="list-item-text">直播</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-section-gap"></li>
+                    <li class="list-item">
+                        <span class="list-item-icon">🔍</span>
+                        <span class="list-item-text">扫一扫</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-item">
+                        <span class="list-item-icon">👋</span>
+                        <span class="list-item-text">摇一摇</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-section-gap"></li>
+                    <li class="list-item">
+                        <span class="list-item-icon">📰</span>
+                        <span class="list-item-text">看一看</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-item">
+                        <span class="list-item-icon">🎯</span>
+                        <span class="list-item-text">搜一搜</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-section-gap"></li>
+                    <li class="list-item">
+                        <span class="list-item-icon">🛍️</span>
+                        <span class="list-item-text">购物</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-item">
+                        <span class="list-item-icon">🎮</span>
+                        <span class="list-item-text">游戏</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-section-gap"></li>
+                    <li class="list-item">
+                        <span class="list-item-icon">小程序</span>
+                        <span class="list-item-text">小程序</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="page-me" class="page">
+            <div class="header">
+                <div class="header-title">我</div>
+            </div>
+            <div class="content" id="me-content" style="background-color: #ededed;">
+                <div class="me-profile-header">
+                    <div class="avatar"><img src="https://picsum.photos/id/20/200/" alt="我的头像"></div>
+                    <div class="me-profile-info">
+                        <div class="me-profile-name">Claude AI</div>
+                        <div class="me-profile-id">
+                            <span>微信号: claude_ai_demo</span>
+                            <span class="me-profile-qrcode">📱</span>
+                        </div>
+                    </div>
+                    <div class="me-profile-arrow">></div>
+                </div>
+                <ul style="padding:0; list-style:none;">
+                    <li class="list-section-gap no-border" style="height:8px;"></li>
+                    <li class="list-item">
+                        <span class="list-item-icon" style="color: #f5a623;">💰</span>
+                        <span class="list-item-text">服务</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-section-gap"></li>
+                    <li class="list-item">
+                        <span class="list-item-icon" style="color: #f5a623;">⭐</span>
+                        <span class="list-item-text">收藏</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-item" data-action="moments">
+                        <span class="list-item-icon" style="color: #4a90e2;">🖼️</span>
+                        <span class="list-item-text">朋友圈</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-item">
+                        <span class="list-item-icon" style="color: #d0021b;">💳</span>
+                        <span class="list-item-text">卡包</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-item">
+                        <span class="list-item-icon" style="color: #f8e71c;">😊</span>
+                        <span class="list-item-text">表情</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                    <li class="list-section-gap"></li>
+                    <li class="list-item">
+                        <span class="list-item-icon" style="color: #4a90e2;">⚙️</span>
+                        <span class="list-item-text">设置</span>
+                        <span class="list-item-arrow">></span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="page-moments" class="page">
+            <div class="header">
+                <div class="header-title">朋友圈</div>
+                <div class="header-buttons">
+                    <div class="header-btn" id="post-btn">📷</div>
+                </div>
+            </div>
+            <div class="content">
+                <div class="pull-indicator">
+                    <div class="pull-circle"></div>
+                    <div class="pull-text">下拉刷新</div>
+                </div>
+                <div class="moments-header-bg">
+                    <div class="moments-profile">
+                        <div class="moments-profile-name">Claude AI</div>
+                        <div class="avatar"><img src="/api/placeholder/64/64" alt="我的头像"></div>
+                    </div>
+                </div>
+                <ul class="moments-list" id="moments-list"></ul>
+                <div class="loading" style="display: none;">
+                    <div class="loading-dots">
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-bar">
+            <div class="tab active" data-tab="chats">
+                <div class="tab-icon">💬</div>
+                <div>微信</div>
+            </div>
+            <div class="tab" data-tab="contacts">
+                <div class="tab-icon">👥</div>
+                <div>通讯录</div>
+            </div>
+            <div class="tab" data-tab="discover">
+                <div class="tab-icon">🧭</div>
+                <div>发现</div>
+            </div>
+            <div class="tab" data-tab="me">
+                <div class="tab-icon">👤</div>
+                <div>我</div>
+            </div>
+        </div>
+        
+        <div class="conversation" id="conversation-view">
+            <div class="conversation-header">
+                <div class="back-btn" id="back-btn">‹</div>
+                <div class="conversation-title" id="conversation-title"></div>
+                <div class="conversation-options" id="conversation-options-btn">···</div>
+            </div>
+            
+            <div id="chat-options-menu">
+                <div class="chat-option-item" data-action="mute">设为静音</div>
+                <div class="chat-option-item" data-action="pin">置顶聊天</div>
+                <div class="chat-option-item" data-action="clear">清空聊天记录</div>
+                <div class="chat-option-item" data-action="delete" style="color: #fa5151;">删除聊天</div>
+            </div>
+
+            <div class="messages-container" id="messages-container"></div>
+            
+            <div class="new-message-indicator">你有多条新消息</div>
+            
+            <div class="input-area">
+                <div class="input-button" id="voice-btn">🎙️</div>
+                <textarea class="message-input" id="message-input" placeholder="发送消息" rows="1"></textarea>
+                <div class="input-button" id="emoji-btn">😊</div>
+                <div class="input-button" id="more-btn" style="display: none;">⊕</div>
+                <button class="send-button" id="send-btn">发送</button>
+            </div>
+            
+            <div class="emoji-picker" id="emoji-picker">
+                <div class="emoji-grid"></div>
+            </div>
+        </div>
+
+        <div class="post-modal" id="post-modal">
+            <div class="post-modal-header">
+                <div class="post-modal-cancel" id="post-modal-cancel">取消</div>
+                <div class="post-modal-title">发表朋友圈</div>
+                <div class="post-modal-submit" id="post-modal-submit">发表</div>
+            </div>
+            <div class="post-modal-content">
+                <textarea class="post-textarea" id="post-textarea" placeholder="这一刻的想法..."></textarea>
+                <div class="post-images-preview" id="post-images-preview"></div>
+                <div class="post-image-add" id="post-image-add">+</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+     let contactsData = [
+            { id: 1, name: "张三", avatar: "https://picsum.photos/id/27/200/", lastMessage: "你好，最近怎么样？", time: "12:30", unread: 2, pinned: false, muted: false },
+            { id: 2, name: "李四", avatar: "https://picsum.photos/seed/lisi/48/48", lastMessage: "好主意！下周六怎么样？我拉个群，把老赵他们也喊上！", time: "昨天", unread: 0, pinned: true, muted: false },
+            { id: 3, name: "微信团队", avatar: "https://picsum.photos/seed/wechat/48/48", lastMessage: "微信9.0版本已经更新，快来体验新功能!", time: "星期一", unread: 1, pinned: false, muted: false },
+            { id: 4, name: "王五", avatar: "https://picsum.photos/seed/wangwu/48/48", lastMessage: "好的，我知道了", time: "星期日", unread: 0, pinned: false, muted: true },
+            { id: 5, name: "前端技术交流群", avatar: "https://picsum.photos/seed/group1/48/48", lastMessage: "大佬们，Vue3的响应式原理是怎样的？", time: "15:42", unread: 15, pinned: false, muted: false },
+            { id: 6, name: "家庭温馨一家人", avatar: "https://picsum.photos/seed/family/48/48", lastMessage: "晚上回家吃饭吗？妈妈做了红烧肉。", time: "10:15", unread: 0, pinned: true, muted: false },
+            { id: 7, name: "赵敏", avatar: "https://picsum.photos/seed/zhaomin/48/48", lastMessage: "周末去爬山怎么样？", time: "14:20", unread: 3, pinned: false, muted: false },
+            { id: 8, name: "产品开发组", avatar: "https://picsum.photos/seed/productgroup/48/48", lastMessage: "下周一的产品需求评审准备好了吗？", time: "09:10", unread: 5, pinned: true, muted: false },
+            { id: 9, name: "陈静", avatar: "https://picsum.photos/seed/chenjing/48/48", lastMessage: "新买的咖啡机真不错！", time: "昨天", unread: 0, pinned: false, muted: false },
+            { id: 10, name: "刘洋", avatar: "https://picsum.photos/seed/liuyang/48/48", lastMessage: "帮我看看这份代码逻辑有没有问题？", time: "16:45", unread: 1, pinned: false, muted: false },
+            { id: 11, name: "高中同学群", avatar: "https://picsum.photos/seed/classmates/48/48", lastMessage: "下个月同学聚会，谁能来？", time: "星期二", unread: 8, pinned: false, muted: true },
+            { id: 12, name: "杨丽", avatar: "https://picsum.photos/seed/yangli/48/48", lastMessage: "浪漫满分！就去海边，我来计划，宝贝你负责美美的！😚", time: "11:50", unread: 0, pinned: false, muted: false },
+            { id: 13, name: "周杰", avatar: "https://picsum.photos/seed/zhoujie/48/48", lastMessage: "今晚篮球赛要不要一起看？", time: "18:30", unread: 2, pinned: false, muted: false }
+        ];
+
+        let conversationsData = {
+            1: [
+                { sender: "contact", content: "嗨，你好！", time: "12:25" },
+                { sender: "contact", content: "最近怎么样？", time: "12:26" },
+                { sender: "user", content: "我很好啊，你呢？最近在忙啥？", time: "12:28" },
+                { sender: "contact", content: "我也不错，最近工作有点忙，项目deadline快到了，天天加班 😭", time: "12:30" }
+            ],
+             2: [
+        { sender: "contact", content: "嘿，兄弟，最近忙啥呢？好久没一起搞点乐子了！😎", time: "2025-05-07 18:30" },
+        { sender: "user", content: "哈哈，最近忙工作，累成狗。你咋样？", time: "2025-05-07 18:35" },
+        { sender: "contact", content: "我还行！刚升了个小职，晚上得庆祝下。你有啥推荐的夜宵摊？", time: "2025-05-07 18:40" },
+        { sender: "user", content: "恭喜啊！老王烧烤呗，啤酒+串，绝配！", time: "2025-05-07 18:45" },
+        { sender: "contact", content: "你喜欢看什么类型的电影？", time: "2025-05-09 19:45" },
+        { sender: "user", content: "我比较喜欢科幻和动作片，剧情烧脑一点的也行。", time: "2025-05-09 19:48" },
+        { sender: "contact", content: "那正好！明天新上映了一部科幻大片《星际迷航：远征》，据说特效爆炸！", time: "2025-05-09 19:50" },
+        { sender: "contact", content: "明天我们一起去看电影吧，我已经买好票了，下午3点场。", time: "2025-05-09 19:51" },
+        { sender: "user", content: "牛！票都买好了，够义气！3点场没问题，哪家影院？", time: "2025-05-09 19:55" },
+        { sender: "contact", content: "万达影城，市中心那家。票我选了VIP厅，坐得舒服点！😏", time: "2025-05-09 20:00" },
+        { sender: "user", content: "豪气！VIP厅爽，明天见！要不要看完电影再去撸串？", time: "2025-05-09 20:05" },
+        { sender: "contact", content: "必须的！老王烧烤走起，边吃边聊！", time: "2025-05-09 20:10" },
+        { sender: "contact", content: "对了，明天别迟到啊，你上次迟到我可记得！😂", time: "2025-05-09 20:15" },
+        { sender: "user", content: "哈哈，放心，这次准时！上次是堵车好吧！😅", time: "2025-05-09 20:20" },
+        { sender: "contact", content: "电影超燃！特效满分，剧情也有点意思！😍 现在到老王烧烤，你到哪了？", time: "2025-05-10 17:30" },
+        { sender: "user", content: "刚到！你在老位置？先点几串牛肉！", time: "2025-05-10 17:35" },
+        { sender: "contact", content: "老位置，牛肉已点！还加了烤鸡翅，你的最爱！快来！🍗", time: "2025-05-10 17:40" },
+        { sender: "user", content: "兄弟够意思！马上到，啤酒别忘了！", time: "2025-05-10 17:45" },
+        { sender: "contact", content: "昨晚吃得太爽了！下次咱再搞个啥？桌游还是KTV？", time: "2025-05-11 10:00" },
+        { sender: "user", content: "桌游吧！三国杀或者谁是卧底，喊上几个人热闹点！", time: "2025-05-11 10:05" },
+        { sender: "contact", content: "好主意！下周六怎么样？我拉个群，把老赵他们也喊上！", time: "2025-05-11 10:10" },
+        { sender: "user", content: "完美！下周六OK，兄弟你安排就行！😄", time: "2025-05-11 10:15" }
+    ],
+            3: [
+                { sender: "contact", content: "尊敬的用户，您好！", time: "星期一 09:00" },
+                { sender: "contact", content: "微信9.0版本已全面升级，新增“拍一拍个性化设置”、“动态表情搜索”以及“青少年模式监护人授权”等功能。我们致力于为您提供更优质、更安全的通讯体验。感谢您的支持！", time: "星期一 09:00" },
+                { sender: "user", content: "哇，新功能听起来很棒！马上去更新体验一下。", time: "星期一 09:05" }
+            ],
+            4: [
+                { sender: "user", content: "王五，上次说的那个季度报告你准备得怎么样了？下周一就要交了哦。", time: "星期日 20:15" },
+                { sender: "contact", content: "放心吧，已经差不多完成了，正在做最后的校对和润色。", time: "星期日 20:18" },
+                { sender: "user", content: "那就好，辛苦了！", time: "星期日 20:19" },
+                { sender: "contact", content: "好的，我知道了", time: "星期日 20:20" }
+            ],
+            5: [
+                { sender: "contact", name: "Alice (群成员)", content: "大佬们，Vue3的响应式原理和Vue2相比，核心区别在哪里呀？最近面试被问到了有点懵。", time: "15:30" },
+                { sender: "user", content: "Vue3改用了Proxy来实现响应式，取代了Vue2的Object.defineProperty。Proxy可以直接监听对象而非属性，性能更好，也能更好地支持数组和动态添加的属性。", time: "15:32" },
+                { sender: "contact", name: "Bob (群成员)", content: "楼上正解！Proxy的Reflect操作也使得代码更规范。", time: "15:35" },
+                { sender: "contact", name: "Alice (群成员)", content: "明白了，感谢两位大佬解惑！我去再看看源码。👍", time: "15:42" }
+            ],
+            6: [
+                { sender: "contact", name: "妈妈", content: "儿子/女儿，晚上回家吃饭吗？", time: "10:05" },
+                { sender: "user", content: "回呀！今天有什么好吃的吗？😋", time: "10:08" },
+                { sender: "contact", name: "妈妈", content: "妈妈做了你最爱吃的红烧肉，还有清蒸鲈鱼和蒜蓉西兰花，早点回来哦！", time: "10:15" },
+                { sender: "user", content: "太棒了！我一下班就飞奔回家！爱您妈妈！！", time: "10:17" }
+            ],
+            7: [
+                { sender: "contact", content: "嘿，周末有空吗？", time: "14:15" },
+                { sender: "user", content: "有啊！你有什么计划？", time: "14:17" },
+                { sender: "contact", content: "周末去爬山怎么样？天气预报说会很晴朗！", time: "14:20" },
+                { sender: "user", content: "好主意！约个时间吧？", time: "14:22" }
+            ],
+            8: [
+                { sender: "contact", name: "PM小张", content: "大家好，关于新功能的需求文档我已经发到群里了，请review。", time: "09:00" },
+                { sender: "user", content: "收到，我今天下午会看完反馈。", time: "09:05" },
+                { sender: "contact", name: "开发小李", content: "下周一的产品需求评审准备好了吗？", time: "09:10" },
+                { sender: "user", content: "正在整理，明天会发初稿。", time: "09:12" }
+            ],
+            9: [
+                { sender: "contact", content: "新买的咖啡机真不错！", time: "昨天 17:30" },
+                { sender: "user", content: "哇，哪款？发个照片看看！", time: "昨天 17:32" },
+                { sender: "contact", content: "哈哈，德龙的全自动，磨豆超香！", time: "昨天 17:35" },
+                { sender: "user", content: "羡慕！改天去你家蹭杯咖啡😄", time: "昨天 17:37" }
+            ],
+            10: [
+                { sender: "contact", content: "帮我看看这份代码逻辑有没有问题？", time: "16:45" },
+                { sender: "user", content: "发过来我看看！", time: "16:47" },
+                { sender: "contact", content: "[代码片段] 这里循环好像有点问题...", time: "16:50" },
+                { sender: "user", content: "嗯，循环条件少了边界检查，改成这样试试...", time: "16:55" }
+            ],
+           11: [
+        { sender: "contact", name: "班长", content: "大家好！好久没聚了，想组织个高中同学聚会，怎么样？😄", time: "2025-05-03 09:00" },
+        { sender: "contact", name: "小明", content: "必须支持！毕业五年了吧？想念老时光！", time: "2025-05-03 09:05" },
+        { sender: "contact", name: "小红", content: "赞成！不过得定个大家都方便的时间。", time: "2025-05-03 09:10" },
+        { sender: "user", content: "好主意！大概什么时候？周末最好。", time: "2025-05-03 09:15" },
+        { sender: "contact", name: "班长", content: "下个月同学聚会，谁能来？", time: "2025-05-06 10:00" },
+        { sender: "user", content: "我应该可以，具体时间地点定了吗？", time: "2025-05-06 10:05" },
+        { sender: "contact", name: "小明", content: "我也想去！希望能定在周末。", time: "2025-05-06 10:10" },
+        { sender: "contact", name: "班长", content: "好，初步定在下个月第一个周六，地点再确认。", time: "2025-05-06 10:15" },
+        { sender: "contact", name: "老王", content: "周六可以！建议市中心，交通方便。", time: "2025-05-06 10:20" },
+        { sender: "contact", name: "小红", content: "市中心酒店太贵了吧？要不去郊区农家乐，烧烤+团建？", time: "2025-05-06 10:25" },
+        { sender: "user", content: "农家乐听起来不错，放松又省钱。班长你觉得呢？", time: "2025-05-06 10:30" },
+        { sender: "contact", name: "班长", content: "农家乐可以！我找几家靠谱的，大家投票。预算大概每人200-300，OK？", time: "2025-05-06 10:35" },
+        { sender: "contact", name: "小明", content: "预算没问题！最好有KTV，哈哈，想听老王唱歌🎤", time: "2025-05-06 10:40" },
+        { sender: "contact", name: "老王", content: "别cue我！上次KTV不是你吼得最凶？😅", time: "2025-05-06 10:45" },
+        { sender: "contact", name: "班长", content: "哈哈，定了！6月7日周六，郊区绿野农家乐，烧烤+团建+KTV，报名私聊我！", time: "2025-05-10 14:00" },
+        { sender: "user", content: "完美！报名+1，期待！有啥需要帮忙的吗？", time: "2025-05-10 14:05" },
+        { sender: "contact", name: "小红", content: "我报名！顺便带点老照片，回忆杀！📷", time: "2025-05-10 14:10" },
+        { sender: "contact", name: "班长", content: "@所有人 报名截止5月20日，活动细节我会在群里更新。@Claude AI 可以帮忙弄个签到表吗？", time: "2025-05-10 14:15" },
+        { sender: "user", content: "没问题，我弄个在线表格，稍后分享链接。", time: "2025-05-10 14:20" },
+        { sender: "contact", name: "小明", content: "大佬效率👍 顺便问下，能不能带家属？", time: "2025-05-10 14:25" },
+        { sender: "contact", name: "班长", content: "家属可以，备注一下人数。表格麻烦了，@Claude AI！", time: "2025-05-10 14:30" },
+        { sender: "user", content: "表格搞定，链接：bit.ly/class-reunion-signup，大家快填！", time: "2025-05-12 09:00" },
+        { sender: "contact", name: "小红", content: "已填！好期待！有没有人组织个节目？", time: "2025-05-12 09:05" },
+        { sender: "contact", name: "老王", content: "节目？要不来个老歌合唱？《同桌的你》走起！", time: "2025-05-12 09:10" },
+        { sender: "user", content: "哈哈，合唱支持！我也提议搞个抽奖，活跃气氛。", time: "2025-05-12 09:15" },
+        { sender: "contact", name: "班长", content: "抽奖好主意！奖品我来赞助点，@Claude AI 你能帮忙弄抽奖程序不？", time: "2025-05-12 09:20" },
+        { sender: "user", content: "可以，我写个简单的随机抽奖小程序，聚会当天用。", time: "2025-05-12 09:25" },
+        { sender: "contact", name: "小明", content: "这聚会越来越有意思了！😄", time: "2025-05-12 09:30" },
+        { sender: "contact", name: "班长", content: "@所有人 提醒一下，6月7日绿野农家乐，10点集合！带好心情！", time: "2025-06-06 10:00" },
+        { sender: "user", content: "收到！抽奖程序已搞定，明天见！", time: "2025-06-06 10:05" },
+        { sender: "contact", name: "小红", content: "我带了高中毕业照，明天一起翻！", time: "2025-06-06 10:10" },
+        { sender: "contact", name: "班长", content: "聚会圆满结束！感谢大家！照片和视频稍后整理发群里！🎉", time: "2025-06-07 20:00" },
+        { sender: "user", content: "太开心了！好久没这么热闹，辛苦班长组织！", time: "2025-06-07 20:05" },
+        { sender: "contact", name: "小明", content: "昨晚唱到嗓子哑了！下次再聚！", time: "2025-06-07 20:10" },
+        { sender: "contact", name: "小红", content: "照片太好笑了！老王那发型绝了😂", time: "2025-06-07 20:15" },
+        { sender: "contact", name: "老王", content: "别黑我！下次我也要翻你黑历史！😜", time: "2025-06-07 20:20" },
+        { sender: "contact", name: "班长", content: "照片视频已上传云盘，链接：bit.ly/reunion-photos，大家看看！", time: "2025-06-08 09:00" },
+        { sender: "user", content: "感谢分享！看了照片满满回忆，下次早点聚！", time: "2025-06-08 09:05" },
+        { sender: "contact", name: "小明", content: "同意！半年后再来一次吧！", time: "2025-06-08 09:10" }
+    ],
+          12: [
+        { sender: "contact", content: "宝贝，今天心情咋样？想你了～😘", time: "2025-05-08 09:30" },
+        { sender: "user", content: "嘿嘿，心情超好，因为有你呀！😍 你呢？", time: "2025-05-08 09:35" },
+        { sender: "contact", content: "有你这甜嘴我能不好吗？😜 今天想吃啥好吃的？", time: "2025-05-08 09:40" },
+        { sender: "user", content: "只要跟你一起，啥都好吃！不过我想吃甜品，奶茶配蛋糕怎么样？", time: "2025-05-08 09:45" },
+        { sender: "contact", content: "好啊！那家‘甜心屋’的芒果奶茶和草莓蛋糕超棒，下午去？", time: "2025-05-08 09:50" },
+        { sender: "user", content: "完美！下午3点见，我的甜心！💕", time: "2025-05-08 09:55" },
+        { sender: "contact", content: "推荐个好吃的餐厅吧！", time: "2025-05-10 11:50" },
+        { sender: "user", content: "你喜欢吃啥？中餐还是西餐？", time: "2025-05-10 11:52" },
+        { sender: "contact", content: "想吃点辣的，川菜怎么样？", time: "2025-05-10 11:55" },
+        { sender: "user", content: "那去‘辣府’吧，他们的麻婆豆腐超正！", time: "2025-05-10 11:57" },
+        { sender: "contact", content: "就知道你懂我！😚 晚上7点‘辣府’，我订位子啦！", time: "2025-05-10 12:00" },
+        { sender: "user", content: "哇，效率满分！爱你哟，晚上见！😘", time: "2025-05-10 12:05" },
+        { sender: "contact", content: "嘿嘿，刚才吃得太开心了！你的笑脸比麻婆豆腐还辣～🌶️", time: "2025-05-10 21:30" },
+        { sender: "user", content: "哈哈，你这嘴甜得能开糖果店！今晚跟你一起超满足！💖", time: "2025-05-10 21:35" },
+        { sender: "contact", content: "那下次换我做饭给你吃，试试我的独家秘方！😉", time: "2025-05-10 21:40" },
+        { sender: "user", content: "真的？！期待你的大厨秀！啥时候开饭？", time: "2025-05-10 21:45" },
+        { sender: "contact", content: "明天晚上吧！我做糖醋排骨，甜甜的，就像你～😘", time: "2025-05-10 21:50" },
+        { sender: "user", content: "哇，甜到心坎里了！明天我带瓶红酒，配你的爱心晚餐！🍷", time: "2025-05-10 21:55" },
+        { sender: "contact", content: "今晚的糖醋排骨，某人吃得开心不？😏", time: "2025-05-11 20:00" },
+        { sender: "user", content: "开心爆了！你的厨艺绝了，感觉被你宠上天！😍", time: "2025-05-11 20:05" },
+        { sender: "contact", content: "那以后我多宠你几次！下周末去哪玩？想跟你到处逛逛～💑", time: "2025-05-11 20:10" },
+        { sender: "user", content: "嗯…去海边吧！手牵手看日落，超浪漫！😘 你觉得呢？", time: "2025-05-11 20:15" },
+        { sender: "contact", content: "浪漫满分！就去海边，我来计划，宝贝你负责美美的！😚", time: "2025-05-11 20:20" }
+    ],
+            13: [
+                { sender: "contact", content: "今晚篮球赛要不要一起看？", time: "18:30" },
+                { sender: "user", content: "好啊！是NBA还是CBA？", time: "18:32" },
+                { sender: "contact", content: "NBA，湖人对勇士，8点开始！", time: "18:35" },
+                { sender: "user", content: "必须看！到时候边看边聊！", time: "18:37" }
+            ]
+        };
+
+    let momentsData = [
+    {
+        id: 1,
+        userId: 1,
+        userName: "张三",
+        avatar: "https://picsum.photos/id/27/200/",
+        content: "今天去爬山，风景超级美！",
+        images: ["https://picsum.photos/seed/mountain1/200/200", "https://picsum.photos/seed/mountain2/200/200"],
+        timestamp: "2025-05-10T10:30:00Z",
+        displayTime: "10分钟前",
+        likes: ["李四", "王五", "赵敏"],
+        comments: [
+            { user: "李四", content: "哇，照片好美！下次一起去！" },
+            { user: "王五", content: "这山在哪里？求推荐！" },
+            { user: "赵敏", content: "我也爱爬山！下次组队吧！" }
+        ]
+    },
+    {
+        id: 2,
+        userId: 2,
+        userName: "李四",
+        avatar: "https://picsum.photos/seed/lisi/48/48",
+        content: "新买的咖啡机到货了，味道绝了☕",
+        images: ["https://picsum.photos/seed/coffee/200/200"],
+        timestamp: "2025-05-10T09:00:00Z",
+        displayTime: "1小时前",
+        likes: ["Claude AI", "陈静"],
+        comments: [
+            { user: "陈静", content: "求推荐！我也想买一台！" }
+        ]
+    },
+    {
+        id: 3,
+        userId: 0,
+        userName: "Claude AI",
+        avatar: "/api/placeholder/64/64",
+        content: "周末在家写代码，感觉效率爆棚！🚀",
+        images: [],
+        timestamp: "2025-05-09T20:00:00Z",
+        displayTime: "昨天",
+        likes: ["张三", "刘洋"],
+        comments: [
+            { user: "张三", content: "大佬！分享点代码心得呗！" },
+            { user: "刘洋", content: "效率爆棚？我得向你学习！" }
+        ]
+    },
+    {
+        id: 4,
+        userId: 7,
+        userName: "赵敏",
+        avatar: "https://picsum.photos/seed/zhaomin/48/48",
+        content: "周末爬山归来，空气清新，超爽！🌄",
+        images: ["https://picsum.photos/seed/hiking/200/200"],
+        timestamp: "2025-05-10T08:00:00Z",
+        displayTime: "2小时前",
+        likes: ["张三", "杨丽"],
+        comments: [
+            { user: "张三", content: "又去爬山了？体力真好！" },
+            { user: "杨丽", content: "下次叫上我！" }
+        ]
+    },
+    {
+        id: 5,
+        userId: 8,
+        userName: "产品开发组",
+        avatar: "https://picsum.photos/seed/productgroup/48/48",
+        content: "新产品功能上线啦！欢迎大家体验和反馈！💻",
+        images: ["https://picsum.photos/seed/product/200/200"],
+        timestamp: "2025-05-10T07:00:00Z",
+        displayTime: "3小时前",
+        likes: ["李四", "刘洋", "Claude AI"],
+        comments: [
+            { user: "刘洋", content: "体验了一下，交互很流畅！" }
+        ]
+    },
+    {
+        id: 6,
+        userId: 9,
+        userName: "陈静",
+        avatar: "https://picsum.photos/seed/chenjing/48/48",
+        content: "周末尝试了新咖啡配方，香浓可口！☕",
+        images: ["https://picsum.photos/seed/coffee2/200/200"],
+        timestamp: "2025-05-09T18:00:00Z",
+        displayTime: "昨天",
+        likes: ["李四", "周杰"],
+        comments: [
+            { user: "李四", content: "你这咖啡机真的让我心动！" }
+        ]
+    },
+    {
+        id: 7,
+        userId: 10,
+        userName: "刘洋",
+        avatar: "https://picsum.photos/seed/liuyang/48/48",
+        content: "调试了一天的代码，终于搞定了个大bug！🎉",
+        images: [],
+        timestamp: "2025-05-09T16:30:00Z",
+        displayTime: "昨天",
+        likes: ["Claude AI", "张三"],
+        comments: [
+            { user: "Claude AI", content: "恭喜！是什么bug？分享下经验！" }
+        ]
+    },
+    {
+        id: 8,
+        userId: 11,
+        userName: "高中同学群",
+        avatar: "https://picsum.photos/seed/classmates/48/48",
+        content: "同学聚会定在下个月，大家快报名！🥳",
+        images: ["https://picsum.photos/seed/party/200/200"],
+        timestamp: "2025-05-09T10:00:00Z",
+        displayTime: "昨天",
+        likes: ["杨丽", "周杰"],
+        comments: [
+            { user: "杨丽", content: "我肯定去！好久没聚了！" },
+            { user: "周杰", content: "地点定了吗？" }
+        ]
+    },
+    {
+        id: 9,
+        userId: 12,
+        userName: "杨丽",
+        avatar: "https://picsum.photos/seed/yangli/48/48",
+        content: "发现一家超好吃的火锅店，推荐给大家！🔥",
+        images: ["https://picsum.photos/seed/hotpot/200/200"],
+        timestamp: "2025-05-08T19:00:00Z",
+        displayTime: "2天前",
+        likes: ["赵敏", "陈静"],
+        comments: [
+            { user: "陈静", content: "求地址！周末去试试！" }
+        ]
+    },
+    {
+        id: 10,
+        userId: 13,
+        userName: "周杰",
+        avatar: "https://picsum.photos/seed/zhoujie/48/48",
+        content: "昨晚的篮球赛太精彩了！🏀",
+        images: ["https://picsum.photos/seed/basketball/200/200"],
+        timestamp: "2025-05-08T22:00:00Z",
+        displayTime: "2天前",
+        likes: ["张三", "刘洋"],
+        comments: [
+            { user: "张三", content: "哪场比赛？错过了！" }
+        ]
+    }
+];
+
+          const commonEmojis = [
+            '😊', '😂', '🤣', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛',
+            '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁',
+            '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵',
+            '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬',
+            '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮',
+            '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️',
+            '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾',
+            '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉',
+            '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝',
+            '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦵', '🦿', '🦶', '👣', '👂', '🦻', '👃', '🧠', '🦷',
+            '🦴', '👀', '👁️', '👅', '👄', '💋', '🩸',
+            '🙈', '🙉', '🙊', '🐵', '🐒', '🦍', '🦧', '🐶', '🐕', '🦮', '🐕‍🦺', '🐩', '🐺', '🦊', '🦝',
+            '🐱', '🐈', '🐈‍⬛', '🦁', '🐯', '🐅', '🐆', '🐴', '🐎', '🦄', '🦓', '🦌', '🦬', '🐮', '🐂',
+            '🐃', '🐄', '🐷', '🐖', '🐗', '🐽', '🐏', '🐑', '🐐', '🐪', '🐫', '🦙', '🦒', '🐘', '🦣',
+            '🦏', '🦛', '🐭', '🐁', '🐀', '🐹', '🐰', '🐇', '🐿️', '🦫', '🦇', '🐻', '🐻‍❄️',
+            '🐨', '🐼', '🦥', '🦦', '🦨', '🦘', '🦡', '🐾', '🦃', '🐔', '🐓', '🐣', '🐤', '🐥', '🐦',
+            '🐧', '🕊️', '🦅', '🦆', '🦢', '🦉', '🦤', '🪶', '🐸', '🐊', '🐢', '🦎', '🐍', '🐲', '🐉',
+            '🦕', '🦖', '🐳', '🐋', '🐬', '🦭', '🐟', '🐠', '🐡', '🦈', '🐙', '🐚', '🐌', '🦋', '🐛',
+            '🐜', '🐝', '🪲', '🐞', '🦗', '🪳', '🕷️', '🕸️', '🦂', '🦟', '🪰', '🪱', '🦠', '💐', '🌸',
+            '💮', '🏵️', '🌹', '🥀', '🌺', '🌻', '🌼', '🌷', '🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🌾',
+            '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🍄', '🌰', '🌍', '🌎', '🌏', '🌑', '🌒', '🌓', '🌔',
+            '🌕', '🌖', '🌗', '🌘', '🌙', '🌚', '🌛', '🌜', '🌡️', '☀️', '🌝', '🌞', '🪐', '⭐', '🌟',
+            '💫', '✨', '☄️', '💥', '🔥', '🌪️', '🌈', '☂️', '☔', '💧', '💦', '🌊', '💨', '❄️', '☃️',
+            '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍',
+            '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅',
+            '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩',
+            '🍗', '🍖', '🦴', '🍔', '🍟', '🍕', '🫓', '🥙', '🧆', '🌮', '🌯', '🫔',
+            '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚',
+            '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭',
+            '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕', '🫖', '🍵', '🍶', '🍾',
+            '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🥤', '🧋', '🧃', '🧉', '🧊', '🥢', '🍽️', '🍴',
+            '🥄', '🔪', '🫙',
+            '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑',
+            '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷',
+            '⛸️', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🏋️‍♀️', '🏋️‍♂️', '🤼', '🤼‍♀️', '🤼‍♂️',
+            '🤸', '🤸‍♀️', '🤸‍♂️', '⛹️', '⛹️‍♀️', '⛹️‍♂️', '🤺', '🤾', '🤾‍♀️', '🤾‍♂️', '🏌️', '🏌️‍♀️',
+            '🏌️‍♂️', '🏇', '🧘', '🧘‍♀️', '🧘‍♂️', '🏄', '🏄‍♀️', '🏄‍♂️', '🏊', '🏊‍♀️', '🏊‍♂️', '🤽', '🤽‍♀️',
+            '🤽‍♂️', '🚣', '🚣‍♀️', '🚣‍♂️', '🧗', '🧗‍♀️', '🧗‍♂️', '🚵', '🚵‍♀️', '🚵‍♂️', '🚴', '🚴‍♀️',
+            '🚴‍♂️', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🤹‍♀️',
+            '🤹‍♂️', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🪗', '🎸',
+            '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰', '🧩',
+            '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🦯',
+            '🦽', '🦼', '🛴', '🚲', '🛵', '🏍️', '🛺', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟',
+            '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫', '🛬',
+            '🛩️', '💺', '🛰️', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛥️', '🛳️', '⛴️', '🚢', '⚓', '⛽',
+            '🚧', '🚦', '🚥', '🛑', '🏁', '🚩', '🎌', '🏳️', '🏳️‍🌈', '🏳️‍⚧️', '🏴‍☠️', '🗿', '🗽', '🗼',
+            '🏰', '🏯', '🏟️', '🎡', '🎢', '🎠', '⛲', '⛱️', '🏖️', '🏝️', '🏜️', '🌋', '⛰️', '🏔️', '🗻',
+            '🏕️', '⛺', '🛖', '🏠', '🏡', '🏘️', '🏚️', '🏗️', '🏭', '🏢', '🏬', '🏣', '🏤', '🏥', '🏦',
+            '🏨', '🏪', '🏫', '🏩', '💒', '🏛️', '⛪', '🕌', '🕍', '🛕', '🕋', '⛩️', '🛤️', '🛣️', '🗾',
+            '🗺️', '🏞️', '🌅', '🌄', '🌠', '🎇', '🎆', '🌇', '🌆', '🌃', '🌌', '🌉', '🌁',
+            '⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀',
+            '📼', '📷', '📸', '📹', '🎥', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️',
+            '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⏳', '⌛', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯',
+            '🛢️', '💸', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎', '⚖️', '🪜', '🧰', '🪛', '🔩',
+            '⚙️', '🪣', '🔗', '⛓️', '🪝', '🧱', '🪨', '🪵', '🔫', '💣', '🧨', '🪓', '🔪',
+            '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬',
+            '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻', '🚽',
+            '🚰', '🚿', '🛁', '🛀', '🧼', '🪥', '🪒', '🧽', '🪣', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑',
+            '🛋️', '🛏️', '🛌', '🧸', '🪆', '🖼️', '🪞', '🪟', '🛍️', '🛒', '🎁', '🎈', '🎏', '🎀', '🎊',
+            '🎉', '🎎', '🏮', '🎐', '🧧', '✉️', '📩', '📨', '📧', '💌', '📮', '📪', '📫', '📬', '📭',
+            '📦', '📯', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️',
+            '📇', '🗃️', '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗',
+            '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗', '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️',
+            '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒', '🔓',
+            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗',
+            '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐',
+            '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑',
+            '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️',
+            '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛',
+            '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗️', '❕', '❓', '❔',
+            '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️',
+            '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🛗', '🈳', '🈂️', '🛂',
+            '🛃', '🛄', '🛅', '🚹', '🚺', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠',
+            '🆖', '🆗', '🆙', '🆒', '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣',
+            '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '⏏️', '▶️', '⏸️', '⏯️', '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪',
+            '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️', '↔️',
+            '↪️', '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵', '🎶', '➕', '➖', '➗', '✖️',
+            '♾️', '💲', '💱', '™️', ' ©️', '®️', '〰️', '➰', '➿', '🔚', '🔙', '🔛', '🔝', '🔜', '✔️',
+            '☑️', '🔘', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹',
+            '🔶', '🔷', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨', '🟩', '🟦',
+            '🟪', '⬛', '⬜', '🟫', '🔈', '🔇', '🔉', '🔊', '🔔', '🔕', '📣', '📢', '👁️‍🗨️', '💬', '💭',
+            '🗯️', '♠️', '♣️', '♥️', '♦️', '🃏', '🎴', '🀄', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖',
+            '🕗', '🕘', '🕙', '🕚', '🕛', '🕜', '🕝', '🕞', '🕟', '🕠', '🕡', '🕢', '🕣', '🕤', '🕥',
+            '🕦', '🕧'
+        ];
+
+        const appContainer = document.querySelector('.app-container');
+        const pages = {
+            chats: document.getElementById('page-chats'),
+            contacts: document.getElementById('page-contacts'),
+            discover: document.getElementById('page-discover'),
+            me: document.getElementById('page-me'),
+            moments: document.getElementById('page-moments')
+        };
+        const chatListEl = document.getElementById('chat-list');
+        const conversationView = document.getElementById('conversation-view');
+        const messagesContainerEl = document.getElementById('messages-container');
+        const conversationTitleEl = document.getElementById('conversation-title');
+        const backBtnEl = document.getElementById('back-btn');
+        const messageInputEl = document.getElementById('message-input');
+        const sendBtnEl = document.getElementById('send-btn');
+        const emojiBtnEl = document.getElementById('emoji-btn');
+        const emojiPickerEl = document.getElementById('emoji-picker');
+        const emojiGridEl = emojiPickerEl.querySelector('.emoji-grid');
+        const voiceBtn = document.getElementById('voice-btn');
+        const moreBtn = document.getElementById('more-btn');
+        const tabs = document.querySelectorAll('.tab');
+        const mainSearchInput = document.getElementById('main-search-input');
+        const loadingIndicator = document.querySelector('#page-chats .loading');
+        const pullIndicator = document.querySelector('#page-chats .pull-indicator');
+        const unreadCountTitleEl = document.getElementById('unread-count-title');
+        const conversationOptionsBtn = document.getElementById('conversation-options-btn');
+        const chatOptionsMenu = document.getElementById('chat-options-menu');
+        const postBtn = document.getElementById('post-btn');
+        const postModal = document.getElementById('post-modal');
+        const postModalCancel = document.getElementById('post-modal-cancel');
+        const postModalSubmit = document.getElementById('post-modal-submit');
+        const postTextarea = document.getElementById('post-textarea');
+        const postImagesPreview = document.getElementById('post-images-preview');
+        const postImageAdd = document.getElementById('post-image-add');
+        const momentsListEl = document.getElementById('moments-list');
+        const momentsLoadingIndicator = document.querySelector('#page-moments .loading');
+        const momentsPullIndicator = document.querySelector('#page-moments .pull-indicator');
+        
+        let currentConversationId = null;
+        let postImages = [];
+
+        function adjustInputArea() {
+            const hasText = messageInputEl.value.trim().length > 0;
+            sendBtnEl.classList.toggle('active', hasText);
+            moreBtn.style.display = hasText ? 'none' : 'flex';
+            voiceBtn.style.display = hasText ? 'none' : 'flex';
+
+            messageInputEl.style.height = 'auto';
+            let newHeight = messageInputEl.scrollHeight;
+            const maxHeight = 80;
+            if (newHeight > maxHeight) {
+                newHeight = maxHeight;
+                messageInputEl.style.overflowY = 'auto';
+            } else {
+                messageInputEl.style.overflowY = 'hidden';
+            }
+            messageInputEl.style.height = newHeight + 'px';
+        }
+
+        function populateEmojiPicker() {
+            emojiGridEl.innerHTML = '';
+            commonEmojis.forEach(emojiChar => {
+                const emojiDiv = document.createElement('div');
+                emojiDiv.classList.add('emoji');
+                emojiDiv.textContent = emojiChar;
+                emojiDiv.addEventListener('click', () => {
+                    messageInputEl.value += emojiChar;
+                    adjustInputArea();
+                    messageInputEl.focus();
+                    emojiPickerEl.style.display = 'none';
+                });
+                emojiGridEl.appendChild(emojiDiv);
+            });
+        }
+
+        function renderChatList(filterText = "") {
+            chatListEl.innerHTML = '';
+            loadingIndicator.style.display = 'none';
+
+            const filteredContacts = contactsData.filter(contact =>
+                contact.name.toLowerCase().includes(filterText.toLowerCase())
+            );
+            
+            const sortedContacts = [...filteredContacts].sort((a, b) => {
+                if (a.pinned && !b.pinned) return -1;
+                if (!a.pinned && b.pinned) return 1;
+                return 0;
+            });
+
+            if (sortedContacts.length === 0) {
+                const noResultsItem = document.createElement('li');
+                noResultsItem.textContent = filterText ? '无搜索结果' : '暂无聊天';
+                noResultsItem.style.textAlign = 'center';
+                noResultsItem.style.padding = '20px';
+                noResultsItem.style.color = '#888';
+                noResultsItem.style.backgroundColor = '#ededed';
+                chatListEl.appendChild(noResultsItem);
+            } else {
+                sortedContacts.forEach(contact => {
+                    const chatItem = document.createElement('li');
+                    chatItem.classList.add('chat-item');
+                    if (contact.muted) chatItem.classList.add('muted');
+                    chatItem.dataset.id = contact.id;
+                    
+                    chatItem.innerHTML = `
+                        <div class="avatar">
+                            <img src="${contact.avatar}" alt="${contact.name}">
+                            ${contact.unread > 0 ? `<div class="badge">${contact.unread > 99 ? '99+' : contact.unread}</div>` : ''}
+                        </div>
+                        <div class="chat-content">
+                            <div class="chat-top">
+                                <div class="chat-name">${contact.name} ${contact.pinned ? '📌' : ''}</div>
+                                <div class="chat-time">${contact.time}</div>
+                            </div>
+                            <div class="chat-message">${contact.muted && contact.unread > 0 ? `[${contact.unread}条] ` : ''}${contact.lastMessage}</div>
+                        </div>
+                    `;
+                    
+                    chatItem.addEventListener('click', function(e) {
+                        const id = parseInt(this.dataset.id);
+                        openConversation(id);
+                        
+                        const ripple = document.createElement('div');
+                        ripple.classList.add('ripple');
+                        const rect = this.getBoundingClientRect();
+                        ripple.style.left = (e.clientX - rect.left) + 'px';
+                        ripple.style.top = (e.clientY - rect.top) + 'px';
+                        this.appendChild(ripple);
+                        setTimeout(() => ripple.remove(), 500);
+                    });
+                    chatListEl.appendChild(chatItem);
+                });
+            }
+            updateTotalUnreadCount();
+        }
+        
+        function updateTotalUnreadCount() {
+            const totalUnread = contactsData.reduce((sum, contact) => sum + (contact.muted ? 0 : contact.unread), 0);
+            unreadCountTitleEl.textContent = totalUnread > 0 ? totalUnread : '';
+            const chatTab = document.querySelector('.tab[data-tab="chats"]');
+            const chatTabBadge = chatTab.querySelector('.tab-badge');
+            if (totalUnread > 0) {
+                if (!chatTabBadge) {
+                    const badge = document.createElement('span');
+                    badge.className = 'tab-badge';
+                    badge.style.cssText = `
+                        position: absolute; top: 3px; right: 20px; background-color: #fa5151; color: white;
+                        border-radius: 9px; font-size: 10px; padding: 1px 4px; min-width: 16px; text-align: center; line-height: 1;
+                    `;
+                    badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+                    chatTab.appendChild(badge);
+                } else {
+                    chatTabBadge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+                }
+            } else {
+                if (chatTabBadge) chatTabBadge.remove();
+            }
+        }
+
+        function renderConversation(id) {
+            const contact = contactsData.find(c => c.id === id);
+            if (!contact) return;
+            currentConversationId = id;
+            
+            conversationTitleEl.textContent = contact.name + (contact.unread > 0 ? ` (${contact.unread})` : '');
+            
+            const unreadBeforeOpening = contact.unread;
+            if (contact.unread > 0) {
+                contact.unread = 0;
+            }
+            
+            messagesContainerEl.innerHTML = '';
+            if (conversationsData[id]) {
+                conversationsData[id].forEach(message => {
+                    appendMessageToDom(message, contact.avatar);
+                });
+            }
+            
+            setTimeout(() => {
+                messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
+            }, 50);
+
+            if (unreadBeforeOpening > 0) {
+                updateTotalUnreadCount();
+            }
+        }
+
+        function appendMessageToDom(message, contactAvatarUrl, isNew = false) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', message.sender === 'user' ? 'sent' : 'received');
+            
+            const userAvatar = "https://picsum.photos/seed/claude/40/40";
+
+            messageElement.innerHTML = `
+                <div class="message-avatar">
+                    <img src="${message.sender === 'user' ? userAvatar : contactAvatarUrl}" alt="avatar">
+                </div>
+                <div class="message-content">
+                    <div class="message-bubble">${message.content.replace(/\n/g, '<br>')}</div>
+                    </div>
+            `;
+            messagesContainerEl.appendChild(messageElement);
+            if (isNew) {
+                if (messagesContainerEl.scrollHeight - messagesContainerEl.scrollTop - messagesContainerEl.clientHeight < 100) {
+                    messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
+                } else {
+                    const indicator = document.querySelector('.new-message-indicator');
+                    indicator.textContent = message.sender === 'user' ? '你发送了一条新消息' : '你收到了一条新消息';
+                    indicator.classList.add('show');
+                    setTimeout(() => indicator.classList.remove('show'), 3000);
+                }
+            }
+        }
+
+        function openConversation(id) {
+            renderConversation(id);
+            conversationView.dataset.id = id;
+            conversationView.classList.remove('slide-out');
+            conversationView.classList.add('active', 'slide-in');
+            setTimeout(() => conversationView.classList.remove('slide-in'), 300);
+            messageInputEl.focus();
+            document.querySelector('.tab-bar').style.display = 'none';
+        }
+
+        function closeConversation() {
+            conversationView.classList.remove('slide-in');
+            conversationView.classList.add('slide-out');
+            currentConversationId = null;
+            chatOptionsMenu.style.display = 'none';
+            
+            setTimeout(() => {
+                conversationView.classList.remove('active', 'slide-out');
+                renderChatList(mainSearchInput.value);
+                document.querySelector('.tab-bar').style.display = 'flex';
+            }, 250);
+        }
+
+        function sendMessage() {
+            const content = messageInputEl.value.trim();
+            if (!content || !currentConversationId) return;
+            
+            const contact = contactsData.find(c => c.id === currentConversationId);
+            if (!contact) return;
+            
+            const now = new Date();
+            const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            const newMessage = { sender: 'user', content: content, time: time };
+            
+            if (!conversationsData[currentConversationId]) conversationsData[currentConversationId] = [];
+            conversationsData[currentConversationId].push(newMessage);
+            
+            contact.lastMessage = content.length > 15 ? content.substring(0, 15) + '...' : content;
+            contact.time = time;
+            
+            appendMessageToDom(newMessage, contact.avatar, true);
+            
+            messageInputEl.value = '';
+            adjustInputArea();
+            messageInputEl.focus();
+            
+            if (Math.random() > 0.4) {
+                setTimeout(() => simulateReply(currentConversationId), 800 + Math.random() * 1500);
+            }
+        }
+
+        function simulateReply(id) {
+if (id !== currentConversationId && conversationView.classList.contains('active')) {
+                return;
+            }
+
+            const contact = contactsData.find(c => c.id === id);
+            if (!contact) return;
+
+            const isGroupChat = contact.name.includes("群") || contact.name.includes("group");
+
+            const replyPool = {
+                generic: [
+                    "好的，我知道了。",
+                    "谢谢分享！",
+                    "嗯，挺有意思的。",
+                    "OK，稍后回复你。",
+                    "没问题！",
+                    "收到，稍等我一下。",
+                    "哈哈，挺好！",
+                    "👍 赞！",
+                    "😊 不错哦！",
+                    "让我想想怎么回你。",
+                    "稍忙，晚点聊！",
+                    "这想法可以！"
+                ],
+                question: [
+                    "嗯，这个我得想想，你觉得呢？",
+                    "好问题！让我查查。",
+                    "你这个问题有点深度啊！",
+                    "等等，我来回答你。",
+                    "这个…我可能需要点时间。",
+                    "你这个问题让我有点懵 😅"
+                ],
+                positive: [
+                    "太棒了！开心！",
+                    "哈哈，超级赞！",
+                    "这消息让我一天都开心！",
+                    "😍 爱了爱了！",
+                    "你这太给力了！",
+                    "🎉 庆祝一下！"
+                ],
+                negative: [
+                    "哎，抱歉听到这个。",
+                    "没事，会好起来的。",
+                    "别太难过，我陪你。",
+                    "😔 有点遗憾。",
+                    "别担心，咱们一起想办法。",
+                    "给你个抱抱 🤗"
+                ],
+                codeRelated: [
+                    "代码看起来不错，我看看逻辑。",
+                    "嗯，调试一下试试？",
+                    "这里可能需要加个边界检查。",
+                    "我帮你跑一下这段代码！",
+                    "这个 bug 我来帮你找。",
+                    "代码有点复杂，我研究下。"
+                ],
+                invitation: [
+                    "哇，这个活动听起来不错！",
+                    "我考虑一下，时间合适就去！",
+                    "好主意！几点集合？",
+                    "OK，算我一个！",
+                    "让我看看日程，稍后确认。",
+                    "这计划我喜欢！"
+                ]
+            };
+
+            const userMessages = conversationsData[id]?.filter(msg => msg.sender === 'user') || [];
+            const lastUserMessage = userMessages[userMessages.length - 1]?.content.toLowerCase() || "";
+
+            let replyCategory = 'generic';
+            if (lastUserMessage.includes('?') || lastUserMessage.includes('吗') || lastUserMessage.includes('怎么') || lastUserMessage.includes('什么')) {
+                replyCategory = 'question';
+            } else if (lastUserMessage.includes('好') || lastUserMessage.includes('棒') || lastUserMessage.includes('开心') || lastUserMessage.includes('赞')) {
+                replyCategory = 'positive';
+            } else if (lastUserMessage.includes('不好') || lastUserMessage.includes('难过') || lastUserMessage.includes('糟糕') || lastUserMessage.includes('问题')) {
+                replyCategory = 'negative';
+            } else if (lastUserMessage.includes('代码') || lastUserMessage.includes('bug') || lastUserMessage.includes('程序') || lastUserMessage.includes('调试')) {
+                replyCategory = 'codeRelated';
+            } else if (lastUserMessage.includes('一起') || lastUserMessage.includes('去') || lastUserMessage.includes('约') || lastUserMessage.includes('聚会')) {
+                replyCategory = 'invitation';
+            }
+
+            const replies = replyPool[replyCategory];
+            const replyContent = replies[Math.floor(Math.random() * replies.length)];
+
+            let senderName = contact.name;
+            if (isGroupChat) {
+                const groupMembers = [
+                    "Alice", "Bob", "Charlie", "David", "Emma",
+                    "小明", "小红", "小刚", "小丽", "老王"
+                ];
+                senderName = groupMembers[Math.floor(Math.random() * groupMembers.length)];
+            }
+
+            const now = new Date();
+            const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+            const newMessage = {
+                sender: 'contact',
+                name: isGroupChat ? senderName : undefined,
+                content: replyContent,
+                time: time
+            };
+
+            if (!conversationsData[id]) conversationsData[id] = [];
+            conversationsData[id].push(newMessage);
+
+            contact.lastMessage = isGroupChat ? `${senderName}: ${replyContent}` : replyContent;
+            contact.time = time;
+
+            if (!contact.muted) {
+                contact.unread = (contact.unread || 0) + 1;
+            }
+
+            if (id === currentConversationId && conversationView.classList.contains('active')) {
+                appendMessageToDom(newMessage, contact.avatar, true);
+            } else {
+                renderChatList(mainSearchInput.value);
+            }
+        }
+
+        // Update switchTab to render contacts when Contacts tab is selected
+function switchTab(tabName) {
+    Object.values(pages).forEach(page => page.classList.remove('active'));
+    pages[tabName].classList.add('active');
+    
+    tabs.forEach(tab => tab.classList.remove('active'));
+    const activeTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+    activeTab.classList.add('active');
+    
+    if (tabName === 'chats') {
+        renderChatList(mainSearchInput.value);
+    } else if (tabName === 'contacts') {
+        renderContactsList(document.getElementById('contacts-search-input').value);
+    } else if (tabName === 'moments') {
+        renderMoments();
+    }
+}
+
+// Add search functionality for contacts
+const contactsSearchInput = document.getElementById('contacts-search-input');
+contactsSearchInput.addEventListener('input', () => {
+    renderContactsList(contactsSearchInput.value);
+});
+
+// Add pull-to-refresh for contacts page
+handlePullToRefresh('page-contacts', () => {
+    renderContactsList(contactsSearchInput.value);
+});
+
+        function handlePullToRefresh(pageId, callback) {
+            const contentEl = document.querySelector(`#${pageId} .content`);
+            const pullIndicatorEl = document.querySelector(`#${pageId} .pull-indicator`);
+            let startY = 0;
+            let pulling = false;
+
+            contentEl.addEventListener('touchstart', (e) => {
+                if (contentEl.scrollTop === 0) {
+                    startY = e.touches[0].clientY;
+                    pulling = true;
+                }
+            });
+
+            contentEl.addEventListener('touchmove', (e) => {
+                if (!pulling) return;
+                const currentY = e.touches[0].clientY;
+                const diff = currentY - startY;
+                if (diff > 0 && contentEl.scrollTop === 0) {
+                    e.preventDefault();
+                    const translate = Math.min(diff / 2, 50);
+                    pullIndicatorEl.style.transform = `translateY(${translate - 50}px)`;
+                    pullIndicatorEl.querySelector('.pull-text').textContent = translate >= 50 ? '释放刷新' : '下拉刷新';
+                }
+            });
+
+            contentEl.addEventListener('touchend', () => {
+                if (!pulling) return;
+                pulling = false;
+                const translate = parseFloat(pullIndicatorEl.style.transform.match(/translateY\(([^)]+)\)/)?.[1] || '0');
+                if (translate >= 50) {
+                    pullIndicatorEl.classList.add('refreshing');
+                    pullIndicatorEl.querySelector('.pull-text').textContent = '正在刷新...';
+                    setTimeout(() => {
+                        callback();
+                        pullIndicatorEl.classList.remove('refreshing');
+                        pullIndicatorEl.style.transform = 'translateY(-50px)';
+                        pullIndicatorEl.querySelector('.pull-text').textContent = '下拉刷新';
+                    }, 1000);
+                } else {
+                    pullIndicatorEl.style.transform = 'translateY(-50px)';
+                }
+            });
+        }
+
+        function renderMoments() {
+            momentsListEl.innerHTML = '';
+            momentsLoadingIndicator.style.display = 'none';
+
+            const sortedMoments = [...momentsData].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            sortedMoments.forEach(moment => {
+                const momentItem = document.createElement('li');
+                momentItem.classList.add('moment-item');
+                momentItem.dataset.id = moment.id;
+
+                const imagesHtml = moment.images.length > 0 ? `
+                    <div class="moment-images">
+                        ${moment.images.map(img => `<img src="${img}" class="moment-image" alt="moment image">`).join('')}
+                    </div>
+                ` : '';
+
+                const likesHtml = moment.likes.length > 0 ? `
+                    <div class="moment-likes">
+                        ❤️ ${moment.likes.map(like => `<span>${like}</span>`).join(', ')}
+                    </div>
+                ` : '';
+
+                const commentsHtml = moment.comments.length > 0 ? `
+                    <div class="moment-comments">
+                        ${moment.comments.map(comment => `
+                            <div class="moment-comment">
+                                <span class="moment-comment-user">${comment.user}</span>: <span class="moment-comment-content">${comment.content}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '';
+
+                momentItem.innerHTML = `
+                    <div class="moment-header">
+                        <div class="avatar"><img src="${moment.avatar}" alt="${moment.userName}"></div>
+                        <div class="moment-user-name">${moment.userName}</div>
+                    </div>
+                    <div class="moment-content">${moment.content}</div>
+                    ${imagesHtml}
+                    <div class="moment-time">${moment.displayTime}</div>
+                    <div class="moment-actions">
+                        <div class="moment-action-btn">⋯</div>
+                        <div class="moment-interactions">
+                            <div class="moment-interaction-btn" data-action="like"><span>👍</span> 赞</div>
+                            <div class="moment-interaction-btn" data-action="comment"><span>💬</span> 评论</div>
+                        </div>
+                    </div>
+                    ${likesHtml}
+                    ${commentsHtml}
+                `;
+
+                momentItem.querySelector('.moment-action-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const interactionsEl = momentItem.querySelector('.moment-interactions');
+                    interactionsEl.classList.toggle('show');
+                });
+
+                momentItem.querySelector('[data-action="like"]').addEventListener('click', () => {
+                    const userName = "Claude AI";
+                    if (!moment.likes.includes(userName)) {
+                        moment.likes.push(userName);
+                    } else {
+                        moment.likes = moment.likes.filter(like => like !== userName);
+                    }
+                    renderMoments();
+                });
+
+                momentItem.querySelector('[data-action="comment"]').addEventListener('click', () => {
+                    const comment = prompt("输入你的评论：");
+                    if (comment && comment.trim()) {
+                        moment.comments.push({ user: "Claude AI", content: comment.trim() });
+                        renderMoments();
+                    }
+                });
+
+                momentsListEl.appendChild(momentItem);
+            });
+        }
+
+        function openPostModal() {
+            postModal.classList.add('active');
+            postTextarea.value = '';
+            postImages = [];
+            renderPostImagesPreview();
+            postTextarea.focus();
+        }
+
+        function closePostModal() {
+            postModal.classList.remove('active');
+            document.querySelector('.moment-interactions.show')?.classList.remove('show');
+        }
+
+        function renderPostImagesPreview() {
+            postImagesPreview.innerHTML = postImages.map(img => `
+                <img src="${img}" class="post-image-preview" alt="preview">
+            `).join('');
+        }
+
+        function submitPost() {
+            const content = postTextarea.value.trim();
+            if (!content && postImages.length === 0) {
+                alert("请填写内容或添加图片！");
+                return;
+            }
+
+            const now = new Date();
+            const newMoment = {
+                id: momentsData.length + 1,
+                userId: 0,
+                userName: "Claude AI",
+                avatar: "/api/placeholder/64/64",
+                content: content,
+                images: [...postImages],
+                timestamp: now.toISOString(),
+                displayTime: "刚刚",
+                likes: [],
+                comments: []
+            };
+
+            momentsData.unshift(newMoment);
+            closePostModal();
+            renderMoments();
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                switchTab(tabName);
+            });
+        });
+
+        backBtnEl.addEventListener('click', closeConversation);
+
+        messageInputEl.addEventListener('input', adjustInputArea);
+
+        messageInputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        sendBtnEl.addEventListener('click', sendMessage);
+
+        emojiBtnEl.addEventListener('click', () => {
+            emojiPickerEl.style.display = emojiPickerEl.style.display === 'block' ? 'none' : 'block';
+        });
+
+        mainSearchInput.addEventListener('input', () => {
+            renderChatList(mainSearchInput.value);
+        });
+
+        conversationOptionsBtn.addEventListener('click', () => {
+            chatOptionsMenu.style.display = chatOptionsMenu.style.display === 'block' ? 'none' : 'block';
+        });
+
+        chatOptionsMenu.addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            if (!action || !currentConversationId) return;
+
+            const contact = contactsData.find(c => c.id === currentConversationId);
+            if (!contact) return;
+
+            switch (action) {
+                case 'mute':
+                    contact.muted = !contact.muted;
+                    alert(contact.muted ? '已设为静音' : '已取消静音');
+                    break;
+                case 'pin':
+                    contact.pinned = !contact.pinned;
+                    alert(contact.pinned ? '已置顶聊天' : '已取消置顶');
+                    break;
+                case 'clear':
+                    if (confirm('确定清空聊天记录？')) {
+                        conversationsData[currentConversationId] = [];
+                        contact.lastMessage = '';
+                        contact.time = '';
+                        renderConversation(currentConversationId);
+                        alert('聊天记录已清空');
+                    }
+                    break;
+                case 'delete':
+                    if (confirm('确定删除此聊天？')) {
+                        contactsData = contactsData.filter(c => c.id !== currentConversationId);
+                        delete conversationsData[currentConversationId];
+                        closeConversation();
+                        alert('聊天已删除');
+                    }
+                    break;
+            }
+
+            renderChatList(mainSearchInput.value);
+            chatOptionsMenu.style.display = 'none';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!chatOptionsMenu.contains(e.target) && !conversationOptionsBtn.contains(e.target)) {
+                chatOptionsMenu.style.display = 'none';
+            }
+            if (!emojiPickerEl.contains(e.target) && !emojiBtnEl.contains(e.target)) {
+                emojiPickerEl.style.display = 'none';
+            }
+            if (!postModal.contains(e.target) && postModal.classList.contains('active') && !postBtn.contains(e.target)) {
+                closePostModal();
+            }
+            const interactionsEl = document.querySelector('.moment-interactions.show');
+            if (interactionsEl && !interactionsEl.contains(e.target) && !e.target.closest('.moment-action-btn')) {
+                interactionsEl.classList.remove('show');
+            }
+        });
+
+        postBtn.addEventListener('click', openPostModal);
+
+        postModalCancel.addEventListener('click', closePostModal);
+
+        postModalSubmit.addEventListener('click', submitPost);
+
+        postImageAdd.addEventListener('click', () => {
+            if (postImages.length >= 9) {
+                alert("最多上传9张图片！");
+                return;
+            }
+            const imgUrl = prompt("请输入图片URL（模拟上传）：", "https://picsum.photos/200/200");
+            if (imgUrl) {
+                postImages.push(imgUrl);
+                renderPostImagesPreview();
+            }
+        });
+
+        document.querySelectorAll('.list-item[data-action="moments"]').forEach(item => {
+            item.addEventListener('click', () => switchTab('moments'));
+        });
+
+        renderChatList();
+        populateEmojiPicker();
+        renderMoments();
+
+        handlePullToRefresh('page-chats', () => {
+            renderChatList(mainSearchInput.value);
+        });
+
+        handlePullToRefresh('page-moments', () => {
+            renderMoments();
+        });
+// Function to render contacts list
+function renderContactsList(filterText = "") {
+    const contactsListEl = document.getElementById('contacts-list');
+    contactsListEl.innerHTML = '';
+
+    const filteredContacts = contactsData.filter(contact =>
+        contact.name.toLowerCase().includes(filterText.toLowerCase())
+    );
+
+    // Sort contacts alphabetically by name
+    const sortedContacts = [...filteredContacts].sort((a, b) => a.name.localeCompare(b.name));
+
+    if (sortedContacts.length === 0) {
+        const noResultsItem = document.createElement('li');
+        noResultsItem.textContent = filterText ? '无搜索结果' : '暂无联系人';
+        noResultsItem.style.textAlign = 'center';
+        noResultsItem.style.padding = '20px';
+        noResultsItem.style.color = '#888';
+        noResultsItem.style.backgroundColor = '#fff';
+        contactsListEl.appendChild(noResultsItem);
+    } else {
+        // Group contacts by first letter (for WeChat-like grouping)
+        const groupedContacts = sortedContacts.reduce((acc, contact) => {
+            const firstLetter = contact.name[0].toUpperCase();
+            if (!acc[firstLetter]) acc[firstLetter] = [];
+            acc[firstLetter].push(contact);
+            return acc;
+        }, {});
+
+        Object.keys(groupedContacts).sort().forEach(letter => {
+            // Add group title
+            const groupTitle = document.createElement('li');
+            groupTitle.classList.add('contact-group-title');
+            groupTitle.textContent = letter;
+            contactsListEl.appendChild(groupTitle);
+
+            // Add contacts in this group
+            groupedContacts[letter].forEach(contact => {
+                const contactItem = document.createElement('li');
+                contactItem.classList.add('contact-item');
+                contactItem.dataset.id = contact.id;
+
+                contactItem.innerHTML = `
+                    <div class="avatar">
+                        <img src="${contact.avatar}" alt="${contact.name}">
+                    </div>
+                    <div class="contact-name">${contact.name}</div>
+                `;
+
+                contactItem.addEventListener('click', () => {
+                    openConversation(contact.id);
+                });
+
+                contactsListEl.appendChild(contactItem);
+            });
+        });
+    }
+}
+
+    </script>
+</body>
+</html>
